@@ -1,7 +1,8 @@
+import { createPredictions } from './predictions.mjs';
+import { selectionPanelColor } from './panel-colors.mjs';
 import { routeFlight } from './flight.mjs';
 import { createScene, createViewToggle, followRoute } from './flight-scene.mjs';
 
-const TILE_COLORS = { outside: '#172d46', target: '#3a68a8', done: '#087d57' };
 
 const card = document.querySelector('.reflight-map-card');
 const speedSelect = document.querySelector('#reinspection [data-speed]');
@@ -17,13 +18,19 @@ card.querySelector('.reflight-map-note').before(note);
 let reflight = { targets: [], phase: 'idle', index: 0, activeId: null };
 let plan = routeFlight([]);
 let routeKey = '', stepKey = '', live = false;
+let previousCells=[],lastLiveTime=-1;
+const predictions=createPredictions(()=>scene.render());
+document.addEventListener('reflight:start',()=>{predictions.clear();lastLiveTime=-1;});
 
 function tileKind(id) {
   const tile = card.querySelector(`[aria-label^="${id} ·"]`);
   return ['done', 'active', 'target'].find(kind => tile?.classList.contains(kind)) ?? 'outside';
 }
 const scene = createScene(stage.querySelector('canvas'), {
-  fillOf: id => TILE_COLORS[tileKind(id)] ?? TILE_COLORS.outside,
+  fillOf: id => {
+    const kind=tileKind(id);
+    return selectionPanelColor({kind,live,result:live&&kind==='done'?predictions.peek(id):null,previousStatus:previousCells.find(c=>c.cell_id===id)?.status});
+  },
   isActive: id => tileKind(id) === 'active'
 });
 scene.setFlight(plan);
@@ -48,12 +55,15 @@ toggle.set('3d');
 document.addEventListener('sitl:flight', event => {
   const source = stage.querySelector('.sitl-source');
   if (!event.detail) { live = false; routeKey = ''; source.textContent = '경로 시뮬레이션'; note.textContent = '3D 드론은 선택한 구역으로 계산한 경로입니다. 드론 비행 기록이 아닙니다.'; follow(); return; }
-  if (!live) { live = true; scene.stop(); source.textContent = '드론 비행'; note.textContent = '3D 드론은 서버 가상 드론의 비행 위치입니다. 실제 기체 비행이 아닙니다.'; }
+  if (!live) { live = true; scene.stop(); source.textContent = '드론 비행'; note.textContent = '남청색: 대기·결과 미확인 · 초록색: 핫스팟 없음 · 빨간색: 핫스팟 탐지 · 노란색: 촬영 중'; }
+  if(event.detail.t<lastLiveTime)predictions.clear();
+  lastLiveTime=event.detail.t;
   scene.setFlight(event.detail.flight);
   scene.setTime(event.detail.t);
 });
 
 document.addEventListener('mission:change', event => {
+  previousCells=event.detail.cells??previousCells;
   reflight = event.detail.reflight ?? reflight;
   const key = `${reflight.targets.join(',')}:${reflight.phase}:${reflight.index}:${reflight.activeId}:${speedSelect.value}`;
   if (key === stepKey) { scene.render(); return; }
