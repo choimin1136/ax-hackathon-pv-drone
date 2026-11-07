@@ -11,6 +11,14 @@ export function snapshotCells(cells, getCandidates) {
 export function recordRecommendations(record) {
   return record.cells.filter(c=>record.targets.includes(c.cell_id)).filter(c=>c.status==='retake' || c.candidates.some(p=>p.decision!=='excluded') || (['check','caution'].includes(c.status)&&!c.candidates.length)).map(c=>c.cell_id);
 }
+// Old records may contain the previous full inspection. Expose only this flight's completed visits.
+export function flightRecordCells(record) {
+  if(record.kind !== 'selection') return structuredClone(record.cells);
+  const visited=new Set(record.visited.filter(id=>record.targets.includes(id)));
+  return record.cells.map(cell=>visited.has(cell.cell_id)?structuredClone(cell):{
+    cell_id:cell.cell_id,status:'pending',candidate_count:0,confirmed_count:0,candidates:[]
+  });
+}
 export function createHistoryStore(storage, {now=()=>new Date().toISOString(),uid=()=>crypto.randomUUID()}={}) {
   let records=[],error='';
   try {
@@ -24,10 +32,10 @@ export function createHistoryStore(storage, {now=()=>new Date().toISOString(),ui
     catch {error='브라우저에 저장하지 못했습니다. 현재 기록은 새로고침하면 사라질 수 있습니다.';}
   };
   return {
-    list:()=>structuredClone(records), error:()=>error,
+    list:()=>records.map(record=>({...structuredClone(record),cells:flightRecordCells(record)})), error:()=>error,
     review(id, cellId, candidates) {
       const record=records.find(r=>r.id===id),cell=record?.cells.find(c=>c.cell_id===cellId);
-      if(!cell)return;
+      if(!cell || (record.kind==='selection' && (!record.visited.includes(cellId)||!record.targets.includes(cellId))))return;
       cell.candidates=structuredClone(candidates);
       cell.confirmed_count=candidates.filter(c=>c.decision==='approved').length;
       save();

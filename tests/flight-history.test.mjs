@@ -33,3 +33,22 @@ test('archive review changes only the selected flight and survives reload',()=>{
  x.store.review(a,'A-1',[{id:'A-1-h1',bbox:[1,2,3,4],area_px:12,decision:'approved'}]);
  const rows=createHistoryStore(x.storage).list();assert.equal(rows[0].cells[0].confirmed_count,1);assert.equal(rows[1].cells[0].confirmed_count,0);assert.equal(data[0].confirmed_count,0);
 });
+
+test('reflight masks non-target and not-yet-visited cells, including legacy records',async()=>{
+ const {flightRecordCells}=await import('../web/inspection-history-store.mjs');
+ const x=setup();let state=startMission(createMission());for(let i=0;i<48;i++)state=tickMission(state);
+ const snapshot=snapshotCells(state.cells,c=>c.candidate_count?[{id:c.cell_id+'-h1',bbox:[1,2,3,4],area_px:12,decision:'approved'}]:[]);
+ let flight=startReflight(createReflight(['A-3','B-2']));
+ x.observe(state,flight,snapshot,'demo');
+ assert.ok(x.store.list()[0].cells.every(c=>c.status==='pending'&&c.candidates.length===0));
+ for(let i=0;i<2;i++){flight=tickReflight(flight);x.observe(state,flight,snapshot,'demo');}
+ const saved=x.store.list()[0];
+ assert.equal(saved.cells.find(c=>c.cell_id==='A-3').candidate_count,1);
+ for(const id of ['B-2','C-4','A-1']) {const c=saved.cells.find(c=>c.cell_id===id);assert.equal(c.status,'pending');assert.equal(c.candidate_count,0);assert.deepEqual(c.candidates,[]);}
+ const legacy={kind:'selection',targets:['A-3','B-2'],visited:['A-3'],cells:snapshot};
+ assert.deepEqual(flightRecordCells(legacy),saved.cells);
+ assert.equal(snapshot.find(c=>c.cell_id==='C-4').status,'check');
+ for(let i=0;i<2;i++){flight=tickReflight(flight);x.observe(state,flight,snapshot,'demo');}
+ assert.equal(x.store.list()[0].cells.find(c=>c.cell_id==='B-2').status,'check');
+ assert.equal(createHistoryStore(x.storage).list()[0].cells.find(c=>c.cell_id==='C-4').status,'pending');
+});

@@ -35,13 +35,15 @@ export function createFlightHistory({getCandidates}) {
   surface.querySelector('input').onchange=drawRoute;new ResizeObserver(drawRoute).observe(surface.querySelector('.cell-grid'));
   function showMap(id){
     activeId=id;const saved=current();if(!saved)return;
+    surface.querySelector('.map-bottom>span').textContent=saved.kind==='selection'?'이번 비행에서 방문 완료한 구역만 표시 · 새 분석이 아닌 합성 예시':'비행 당시 구역 상태 · 합성 판정/이미지';
     list.hidden=true;columns.hidden=true;panel.hidden=false;
     panel.querySelector('[data-date]').textContent=formatStarted(saved.startedAt)+' · '+phaseLabel(saved.phase);
     const grid=surface.querySelector('.cell-grid');grid.replaceChildren();
     for(const cell of saved.cells){
       const button=document.createElement('button');button.type='button';const counts={approved:0,excluded:0,pending:0};for(const c of cell.candidates)counts[c.decision]++;const review=cellReviewStatus(cell,counts);
       button.className='cell '+review.style;button.dataset.cell=cell.cell_id;
-      button.setAttribute('aria-label',cell.cell_id+' 기록 상세, '+STATUS[cell.status].label);
+      const unvisited=saved.kind==='selection'&&(!saved.visited.includes(cell.cell_id)||!saved.targets.includes(cell.cell_id));
+      button.setAttribute('aria-label',cell.cell_id+' 기록 상세, '+(unvisited?'이번 비행 미점검 · 이미지 없음':STATUS[cell.status].label));
       button.innerHTML=`<span class="panel-lines" aria-hidden="true"></span><span class="cell-id">${cell.cell_id}</span><span class="cell-symbol" aria-hidden="true">${review.symbol}</span>`;
       button.onclick=()=>{grid.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));detail.loadReviews(current().cells.flatMap(c=>c.candidates));detail.open(cell.cell_id);};grid.append(button);
     }
