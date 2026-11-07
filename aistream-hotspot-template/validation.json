@@ -1,0 +1,17 @@
+{
+  "date_kst": "2026-11-07",
+  "source_syntax": "PASS",
+  "pyproject_parse": "PASS",
+  "template_inout_schema_and_runtime_model_key": "PASS",
+  "checkpoint_sha256": "cb36cb477ece96942047d57091bef2607907979ec1feefcbc38045d22194d204",
+  "model_load_and_synthetic_image_http_test": "PASS",
+  "health_and_mask_dimensions": "PASS",
+  "platform_schema_v1_infer_dto_overlay": "PASS",
+  "serving_entrypoint_cuda_fixed_no_device_option": "PASS",
+  "cuda_unavailable_fails_startup": "PASS",
+  "top_level_probability_threshold_calibration_consistency": "PASS",
+  "invalid_image_400_missing_upload_422": "PASS",
+  "missing_checkpoint_and_invalid_model_input_fail": "PASS",
+  "environment": "Windows Python 3.13, CPU torch 2.15.0, transformers 4.57.6",
+  "platform_build_linux_python311_gpu_real_image_accuracy": "UNVERIFIED"
+}
