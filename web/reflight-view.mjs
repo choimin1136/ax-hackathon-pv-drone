@@ -11,7 +11,7 @@ stage.innerHTML = '<canvas role="img" aria-label="선택 구역 재비행 경로
 card.querySelector('.reflight-mini-map').before(stage);
 const note = document.createElement('p');
 note.className = 'reflight-map-note reflight-3d-note';
-note.textContent = '3D 드론은 선택한 구역으로 계산한 경로입니다. SITL 비행 기록이 아닙니다.';
+note.textContent = '3D 드론은 선택한 구역으로 계산한 경로입니다. 드론 비행 기록이 아닙니다.';
 card.querySelector('.reflight-map-note').before(note);
 
 let reflight = { targets: [], phase: 'idle', index: 0, activeId: null };
@@ -47,8 +47,8 @@ toggle.set('3d');
 // A reflight flown by SITL replaces the calculated route with the real flight record.
 document.addEventListener('sitl:flight', event => {
   const source = stage.querySelector('.sitl-source');
-  if (!event.detail) { live = false; routeKey = ''; source.textContent = '경로 시뮬레이션'; note.textContent = '3D 드론은 선택한 구역으로 계산한 경로입니다. SITL 비행 기록이 아닙니다.'; follow(); return; }
-  if (!live) { live = true; scene.stop(); source.textContent = 'SITL 비행'; note.textContent = '3D 드론은 서버의 SITL 비행 위치입니다. 실제 드론 비행이 아닙니다.'; }
+  if (!event.detail) { live = false; routeKey = ''; source.textContent = '경로 시뮬레이션'; note.textContent = '3D 드론은 선택한 구역으로 계산한 경로입니다. 드론 비행 기록이 아닙니다.'; follow(); return; }
+  if (!live) { live = true; scene.stop(); source.textContent = '드론 비행'; note.textContent = '3D 드론은 서버 가상 드론의 비행 위치입니다. 실제 기체 비행이 아닙니다.'; }
   scene.setFlight(event.detail.flight);
   scene.setTime(event.detail.t);
 });

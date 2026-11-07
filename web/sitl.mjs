@@ -14,8 +14,8 @@ const LANDING_MS = 6000;
 const CONFIRM_MS = 5000;
 const CELL_COLORS = { pending: '#7d8fa9', no_candidate: '#087d57', caution: '#d18a12', check: '#c63038', retake: '#713bc2' };
 const NOTES = {
-  demo: '구역 판정은 예시이고, 비행은 저장된 SITL 기록입니다.<br>실제 드론과 AI는 연결되지 않았습니다.',
-  live: '서버의 ArduPilot SITL을 실행합니다. 실제 드론 비행이 아니며,<br>구역 판정은 예시이고 AI는 연결되지 않았습니다.'
+  demo: '구역 판정은 예시이고, 비행은 저장된 가상 드론 기록입니다.<br>실제 드론과 AI는 연결되지 않았습니다.',
+  live: '서버에서 가상 드론(ArduPilot 시뮬레이터)을 실행합니다. 실제 기체 비행이 아니며,<br>구역 판정은 예시이고 AI는 연결되지 않았습니다.'
 };
 
 const root = document.getElementById('sitl');
@@ -46,7 +46,7 @@ controls.className = 'live-controls';
 controls.innerHTML = `
   <div class="live-status" role="status"><span id="live-pill" class="sim-pill" data-state="off">확인 중</span></div>
   <label>비행 범위<select id="live-cells"><option value="">전체 24셀</option><option value="C-4,C-5,C-6">재점검 3셀 (C-4, C-5, C-6)</option></select></label>
-  <div class="live-buttons"><button id="live-power" type="button" disabled>SITL 켜기</button><button id="live-fly" class="primary" type="button" disabled>▶ 비행 시작</button></div>
+  <div class="live-buttons"><button id="live-power" type="button" disabled>드론 켜기</button><button id="live-fly" class="primary" type="button" disabled>▶ 비행 시작</button></div>
   <p id="live-message" class="sim-message" role="status"></p>`;
 document.getElementById('play').before(controls);
 
@@ -157,7 +157,7 @@ function followReflight(next) {
     if (!reflight) return false;
     reflight = null; routeKey = '';
     if (mode === 'demo') {
-      showFlight(record, 'SITL 비행 기록');
+      showFlight(record, '드론 비행 기록');
       scene.setTime(mission?.phase === 'complete' ? record.duration_s : 0);
     } else loadLive(false).catch(() => {});
     return true;
@@ -191,10 +191,10 @@ function renderControls() {
   pill.dataset.state = status.flying ? 'flying' : status.ready ? 'on' : status.sitl ? 'busy' : 'off';
   if (waiting) { pill.textContent = `${STAGES[status.stage]} · ${seconds}초`; pill.dataset.state = 'busy'; }
   else if (status.flying) pill.textContent = `● 비행 중 · ${status.speedup}배속`;
-  else if (starting) pill.textContent = `SITL 켜는 중 · ${seconds}초`;
-  else pill.textContent = status.sitl ? `SITL 준비됨 · ${status.speedup}배속` : 'SITL 꺼짐';
+  else if (starting) pill.textContent = `드론 켜는 중 · ${seconds}초`;
+  else pill.textContent = status.sitl ? `드론 준비됨 · ${status.speedup}배속` : '드론 꺼짐';
   const confirming = status.sitl && Date.now() < confirmOffUntil;
-  power.textContent = confirming ? '⚠ 한 번 더 누르면 꺼짐' : status.sitl ? 'SITL 끄기' : 'SITL 켜기';
+  power.textContent = confirming ? '⚠ 한 번 더 누르면 꺼짐' : status.sitl ? '드론 끄기' : '드론 켜기';
   power.classList.toggle('sim-warning', confirming);
   power.disabled = busy;
   fly.disabled = busy || !status.ready;
@@ -207,7 +207,7 @@ function setMessage(text, isError = false) {
 }
 async function loadLive(follow) {
   const response = await fetch('./api/missions/live');
-  if (!response.ok) { if (!flight) showFlight(null, 'SITL 비행 없음'); return; }
+  if (!response.ok) { if (!flight) showFlight(null, '드론 비행 없음'); return; }
   const next = await response.json();
   if (!next.positions.length) return;
   next.speedup = status?.speedup ?? 1;
@@ -222,7 +222,7 @@ function showFlightKeepLog(next, fresh) {
   entries = buildLog(next);
   scene.setFlight(next);
   if (fresh) { shown = -1; $('sitl-log').replaceChildren(); }
-  $('sitl-source').textContent = next.complete ? 'SITL 최근 비행' : '● SITL 비행 중';
+  $('sitl-source').textContent = next.complete ? '드론 최근 비행' : '● 드론 비행 중';
 }
 async function poll() {
   if (mode !== 'live') return;
@@ -238,9 +238,9 @@ async function poll() {
     if (!reflight && recordExists && (status.flying || wasFlying)) await loadLive(status.flying);
     if (wasFlying && !status.flying && reflightLive && status.mission !== 'done') {
       reflightLive = null; reflightKey = '';
-      document.dispatchEvent(new CustomEvent('reflight:set', { detail: { phase: 'idle', targets: [], index: 0, activeId: null, elapsed: 0, notice: 'SITL 재비행이 완료되지 않았습니다. SITL 상태를 확인한 뒤 다시 시작하세요.' } }));
+      document.dispatchEvent(new CustomEvent('reflight:set', { detail: { phase: 'idle', targets: [], index: 0, activeId: null, elapsed: 0, notice: '드론 재비행이 완료되지 않았습니다. 드론 상태를 확인한 뒤 다시 시작하세요.' } }));
     }
-    if (wasFlying && !status.flying) setMessage(status.mission === 'done' ? '비행을 마치고 착륙했습니다.' : '비행이 완료되지 않았습니다. SITL 상태를 확인한 뒤 다시 시도하세요.', status.mission !== 'done');
+    if (wasFlying && !status.flying) setMessage(status.mission === 'done' ? '비행을 마치고 착륙했습니다.' : '비행이 완료되지 않았습니다. 드론 상태를 확인한 뒤 다시 시도하세요.', status.mission !== 'done');
     wasFlying = status.flying;
   } catch { status = null; }
   polled = true;
@@ -251,7 +251,7 @@ async function act(name, body, doneMessage, { reflightRun = false } = {}) {
   setMessage('요청 중입니다…');
   try {
     const response = await fetch(`./api/sitl/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
-    if (!response.ok) { setMessage(response.status === 409 ? '지금은 실행할 수 없습니다. SITL 준비 상태와 진행 중인 비행을 확인하세요.' : '요청을 처리하지 못했습니다.', true); return false; }
+    if (!response.ok) { setMessage(response.status === 409 ? '지금은 실행할 수 없습니다. 드론 준비 상태와 진행 중인 비행을 확인하세요.' : '요청을 처리하지 못했습니다.', true); return false; }
     status = await response.json();
     stageKey = ''; stageSince = Date.now();
     setMessage(doneMessage);
@@ -259,7 +259,7 @@ async function act(name, body, doneMessage, { reflightRun = false } = {}) {
     if (name === 'fly') {
       wasFlying = true; liveKey = '';
       if (!reflightRun) { reflightLive = null; document.dispatchEvent(new CustomEvent('mission:set', { detail: { reset: true } })); }
-      showFlight(null, '● SITL 비행 준비 중');
+      showFlight(null, '● 드론 비행 준비 중');
       clearFacts();
       scene.setTime(0);
     }
@@ -273,17 +273,17 @@ document.addEventListener('reflight:start', event => {
   event.preventDefault();
   const { targets } = event.detail;
   if (!status?.ready || status.flying) {
-    event.detail.notice = !status?.sitl ? 'SITL이 꺼져 있습니다. 점검 현황에서 SITL을 켠 뒤 다시 시작하세요.' : status.flying ? '다른 비행이 진행 중입니다. 끝난 뒤 다시 시작하세요.' : 'SITL이 아직 준비 중입니다. 잠시 후 다시 시작하세요.';
+    event.detail.notice = !status?.sitl ? '드론이 꺼져 있습니다. 점검 현황에서 드론을 켠 뒤 다시 시작하세요.' : status.flying ? '다른 비행이 진행 중입니다. 끝난 뒤 다시 시작하세요.' : '드론이 아직 준비 중입니다. 잠시 후 다시 시작하세요.';
     return;
   }
   event.detail.started = true;
   reflightLive = [...targets]; reflightKey = '';
   // Drop the previous flight now so its finished state is not reported as this reflight.
-  showFlight(null, '● SITL 재비행 준비 중'); clearFacts(); scene.setTime(0);
-  act('fly', { cells: targets.join(',') }, `선택 구역 ${targets.length}곳을 SITL로 재비행합니다.`, { reflightRun: true }).then(ok => {
+  showFlight(null, '● 드론 재비행 준비 중'); clearFacts(); scene.setTime(0);
+  act('fly', { cells: targets.join(',') }, `선택 구역 ${targets.length}곳을 드론으로 재비행합니다.`, { reflightRun: true }).then(ok => {
     if (ok) return;
     reflightLive = null;
-    document.dispatchEvent(new CustomEvent('reflight:set', { detail: { phase: 'idle', targets: [], index: 0, activeId: null, elapsed: 0, notice: 'SITL 재비행을 시작하지 못했습니다. 점검 현황에서 SITL 상태를 확인하세요.' } }));
+    document.dispatchEvent(new CustomEvent('reflight:set', { detail: { phase: 'idle', targets: [], index: 0, activeId: null, elapsed: 0, notice: '드론 재비행을 시작하지 못했습니다. 점검 현황에서 드론 상태를 확인하세요.' } }));
   });
 });
 function resetConfirm() {
@@ -292,10 +292,10 @@ function resetConfirm() {
 }
 // Anyone can use these buttons, so turning SITL off takes a second click within a few seconds.
 $('live-power').addEventListener('click', () => {
-  if (!status?.sitl) { resetConfirm(); act('start', null, 'SITL을 켜는 중입니다. 준비되면 비행 시작 버튼이 켜집니다.'); return; }
-  if (Date.now() < confirmOffUntil) { resetConfirm(); act('stop', null, 'SITL을 껐습니다.'); return; }
+  if (!status?.sitl) { resetConfirm(); act('start', null, '드론을 켜는 중입니다. 준비되면 비행 시작 버튼이 켜집니다.'); return; }
+  if (Date.now() < confirmOffUntil) { resetConfirm(); act('stop', null, '드론을 껐습니다.'); return; }
   confirmOffUntil = Date.now() + CONFIRM_MS;
-  setMessage(status.flying ? '⚠ 지금 비행 중입니다. 끄면 비행이 중단되고 다른 사람의 화면도 멈춥니다. 5초 안에 다시 누르면 꺼집니다.' : '⚠ 다른 사람이 사용 중일 수 있습니다. 5초 안에 다시 누르면 SITL이 꺼집니다.', true);
+  setMessage(status.flying ? '⚠ 지금 비행 중입니다. 끄면 비행이 중단되고 다른 사람의 화면도 멈춥니다. 5초 안에 다시 누르면 꺼집니다.' : '⚠ 다른 사람이 사용 중일 수 있습니다. 5초 안에 다시 누르면 드론이 꺼집니다.', true);
   renderControls();
   clearTimeout(confirmTimer);
   confirmTimer = setTimeout(() => { confirmOffUntil = 0; setMessage(''); renderControls(); }, CONFIRM_MS);
@@ -313,10 +313,10 @@ async function applyMode(next) {
   reflight = null; routeKey = ''; missionKey = ''; liveKey = '';
   clearInterval(pollId);
   $('sitl-copy').textContent = next === 'live'
-    ? '서버에서 실행 중인 ArduPilot SITL의 실시간 위치와 로그입니다. 셀 색은 예시 판정이며, 실제 드론 비행이 아닙니다.'
-    : '드론 위치·고도·로그는 ArduPilot SITL에서 실행한 비행 기록이고, 셀 색은 예시 판정입니다. 실제 드론 비행이 아닙니다.';
+    ? '서버에서 실행 중인 가상 드론(ArduPilot 시뮬레이터)의 실시간 위치와 로그입니다. 셀 색은 예시 판정이며, 실제 기체 비행이 아닙니다.'
+    : '드론 위치·고도·로그는 가상 드론(ArduPilot 시뮬레이터)의 비행 기록이고, 셀 색은 예시 판정입니다. 실제 기체 비행이 아닙니다.';
   document.querySelector('.simulation-note').innerHTML = NOTES[next];
-  showFlight(next === 'demo' ? record : null, next === 'demo' ? 'SITL 비행 기록' : 'SITL 비행 없음');
+  showFlight(next === 'demo' ? record : null, next === 'demo' ? '드론 비행 기록' : '드론 비행 없음');
   clearFacts();
   scene.setTime(0);
   document.dispatchEvent(new CustomEvent('mission:set', { detail: { reset: true } }));
@@ -346,8 +346,8 @@ document.addEventListener('mission:change', event => {
   mission = event.detail;
   const next = mission.reflight;
   const key = `${mission.phase}:${mission.index}:${mission.activeId}:${$('speed').value}:${next?.targets.join(',')}:${next?.phase}:${next?.index}:${next?.activeId}:${document.querySelector('#reinspection [data-speed]')?.value}`;
-  if (mode === 'live' && reflightLive) $('mission-copy').textContent = next?.phase === 'complete' ? '재점검 대상 구역의 SITL 재비행을 마쳤습니다.' : '재점검 대상 구역을 SITL로 다시 비행하고 있습니다.';
-  else if (mode === 'live' && !next?.targets.length) { $('mission-copy').textContent = status?.flying ? '서버의 SITL 드론이 구역을 비행하고 있습니다.' : 'SITL을 켠 뒤 비행을 시작하세요. 도착한 구역부터 결과가 표시됩니다.'; }
+  if (mode === 'live' && reflightLive) $('mission-copy').textContent = next?.phase === 'complete' ? '재점검 대상 구역의 드론 재비행을 마쳤습니다.' : '재점검 대상 구역을 드론으로 다시 비행하고 있습니다.';
+  else if (mode === 'live' && !next?.targets.length) { $('mission-copy').textContent = status?.flying ? '드론이 구역을 비행하고 있습니다.' : '드론을 켠 뒤 비행을 시작하세요. 도착한 구역부터 결과가 표시됩니다.'; }
   if (key === missionKey) { scene.render(); return; }
   missionKey = key;
   if ((record || mode === 'live') && followReflight(next)) return;
