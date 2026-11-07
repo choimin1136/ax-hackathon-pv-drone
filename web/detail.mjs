@@ -60,6 +60,7 @@ export function createDetail({getCell, onChange}) {
       const cell=getCell(active);
       if(dialog.open && cell && renderedStatus!==`${cell.cell_id}:${cell.status}:${cell.candidate_count}`) render();
     },
+    candidates(cell) { return candidatesFor(cell).map(c=>({...c,cell_id:cell.cell_id,decision:reviews[c.id]??'pending'})); },
     summary(cell) {return reviewSummary(cell,reviews);},
     reset() {reviews={};if(dialog.open) dialog.close();}
   };
