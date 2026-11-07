@@ -14,6 +14,8 @@ const PANEL_HIGH_M = 6.5;
 const PANEL_THICK_M = 0.7;
 const SHADOW_SLANT = 0.9;
 const COLORS = { ground: '#8aa779', field: '#7e9d6c', panelShadow: 'rgba(23, 36, 59, 0.16)', post: '#6f7d92', panelEdge: '#3b475b', frame: 'rgba(84, 99, 122, 0.55)', line: '#ffffff', active: '#f2b632', label: '#ffffff', activeLabel: '#17243b', pad: '#94a3b8', padMark: '#ffffff', trail: '#2563eb', shadow: '#55657d', tether: '#55657d', drone: '#17243b', rotor: '#2563eb', rotorDisc: 'rgba(37, 99, 235, 0.3)', capture: 'rgba(242, 182, 50, 0.4)' };
+// Before any flight the drone waits on the launch pad.
+const PARKED = { ...HOME, rel_alt_m: 0, heading: 0 };
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const cells = plantCells();
 // Fixed world-space blades keep the texture still while the camera or drone moves.
@@ -168,7 +170,7 @@ export function createScene(canvas, { fillOf, isActive, onCellClick, onRender })
       drawPad();
       byDepth().forEach(cell => drawCell(cell, state));
       drawTrail(state?.phase);
-      drawDrone(state?.position, state?.phase);
+      drawDrone(state?.position ?? (flight ? null : PARKED), state?.phase);
     }
     if (state) onRender?.(state, t);
   }
