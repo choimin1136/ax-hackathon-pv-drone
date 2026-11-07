@@ -6,3 +6,8 @@
 .media-stage [data-highlight] {pointer-events:none;}
 .media-stage img[hidden] {display:none;}
 .detail-dialog [aria-busy="true"] [data-media-status] {padding:20px;background:#eaf1e5;border-radius:8px;}
+
+[data-analysis] fieldset {min-width:0;margin:0 0 16px;padding:12px;border:1px solid #b6c5af;border-radius:8px;background:#eef3e8;}
+[data-analysis] label {display:block;font-size:12px;margin:8px 0;}
+[data-analysis] select {width:100%;max-width:100%;padding:8px;}
+[data-analysis][aria-busy="true"] {opacity:.8;}
