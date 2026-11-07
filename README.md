@@ -123,6 +123,12 @@ node server/index.mjs
 npm test
 ```
 
+시연 전에는 서버에서 모델 연결을 점검합니다. 모델 서빙 상태, `PHOTO_DIR`의 핫스팟·정상 사진 몇 장의 직접 판정(라벨 일치와 응답 시간), 웹 서버의 모델 연결을 차례로 확인하고, 문제가 있으면 종료 코드 1로 끝납니다.
+
+```bash
+cd /data/hackathon/deploy && PHOTO_DIR=/data/test npm run check:model -- --count 10
+```
+
 ### 설정값
 
 웹 서버는 환경 변수로 설정합니다. 비워 두면 기본값을 씁니다. 전체 예시는 [sitl/sitl.env.example](sitl/sitl.env.example)에 있습니다.
@@ -149,7 +155,7 @@ npm test
 | `model/` | 핫스팟 모델 학습·추론 코드 |
 | `aistream-hotspot-template/` | 모델 서빙 배포 템플릿 |
 | `tests/` | 자동 테스트 (`node --test`) |
-| `tools/` | 정적 화면만 띄우는 개발용 서버 |
+| `tools/` | 모델 점검 스크립트(`check-model.mjs`), 정적 화면만 띄우는 개발용 서버 |
 
 ## 한계
 
