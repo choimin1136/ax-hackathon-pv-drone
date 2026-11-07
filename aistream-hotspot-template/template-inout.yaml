@@ -1,0 +1,18 @@
+# 플랫폼 빌드는 이 파일을 읽어 모델 입력과 HTTP 서빙 출력 포트를 등록합니다.
+# 파일명은 template-inout.yaml이며 main.py와 같은 최상위 폴더에 둡니다.
+inouts:
+  - ioType: INPUT
+    portName: model
+    kind: MLFLOW_MODEL
+    path: /app/volume/models/model
+    format: mlflow
+    isRequired: true
+    portIdx: 0
+  - ioType: OUTPUT
+    portName: serving
+    kind: SERVING
+    format: http
+    isRequired: true
+    portIdx: 0
+runtime:
+  usesMlflowRun: false
