@@ -48,6 +48,14 @@ test('visited cells and log entries appear only once their time has passed', () 
   assert.equal(logUntil(log, 60).at(-1).text, '미션 종료 · 프레임 2/2');
 });
 
+test('a faster flight uses a shorter capture window so stops do not overlap', () => {
+  const fast = { ...flight, capture_s: 0.25 };
+  assert.equal(phaseAt(flight, 12), 'capture');
+  assert.equal(phaseAt(fast, 11.1), 'capture');
+  assert.equal(phaseAt(fast, 12), 'moving');
+  assert.equal(stateAt(fast, 12).current, null);
+});
+
 test('an in-progress flight has no end entry and never reports done', () => {
   const live = { ...flight, complete: false, duration_s: 15, positions: flight.positions.slice(0, 4), frames: flight.frames.slice(0, 1) };
   assert.notEqual(phaseAt(live, 15), 'done');

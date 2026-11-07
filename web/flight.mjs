@@ -39,12 +39,13 @@ export function phaseAt(flight, t) {
   const cruiseAlt = Math.max(...flight.positions.map(p => p.rel_alt_m)) * CRUISE_RATIO;
   const lastFrame = flight.frames.at(-1);
   if (flight.complete && t >= flight.duration_s) return 'done';
-  if (lastFrame && t >= lastFrame.t + CAPTURE_S) return position.rel_alt_m < cruiseAlt ? 'landing' : 'returning';
+  const capture = flight.capture_s ?? CAPTURE_S;
+  if (lastFrame && t >= lastFrame.t + capture) return position.rel_alt_m < cruiseAlt ? 'landing' : 'returning';
   if (!flight.frames.some(frame => frame.t <= t)) {
     if (position.rel_alt_m >= cruiseAlt) return 'moving';
     return flight.positions.slice(0, lastIndexAtOrBefore(flight.positions, t) + 1).some(p => p.rel_alt_m > 0.5) ? 'takeoff' : 'waiting';
   }
-  return flight.frames.some(frame => t >= frame.t && t < frame.t + CAPTURE_S) ? 'capture' : 'moving';
+  return flight.frames.some(frame => t >= frame.t && t < frame.t + capture) ? 'capture' : 'moving';
 }
 
 export function stateAt(flight, t) {

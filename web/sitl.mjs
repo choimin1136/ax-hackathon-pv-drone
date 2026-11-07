@@ -8,7 +8,8 @@ const STAGES = { gps: '위치 확인 중', mission: '미션 업로드 중', armi
 const RECORD_ID = 'mission_01';
 const LIVE_HASH = '#overview-live';
 const DEMO_HASH = '#overview';
-const POLL_MS = 2000;
+const POLL_MS = 1000;
+const CAPTURE_S = 2;
 const LANDING_MS = 6000;
 const CONFIRM_MS = 5000;
 const CELL_COLORS = { pending: '#7d8fa9', no_candidate: '#087d57', caution: '#d18a12', check: '#c63038', retake: '#713bc2' };
@@ -27,13 +28,9 @@ root.innerHTML = `
   <p id="sitl-copy" class="sitl-copy"></p>
   <dl class="sitl-facts">
     <div><dt>상태</dt><dd id="sitl-phase">—</dd></div>
-    <div><dt>최근 셀</dt><dd id="sitl-cell">—</dd></div>
     <div><dt>고도</dt><dd id="sitl-alt">—</dd></div>
     <div><dt>위치 (x, y)</dt><dd id="sitl-pos">—</dd></div>
-    <div><dt>방향</dt><dd id="sitl-heading">—</dd></div>
-    <div><dt>배터리 (시뮬)</dt><dd id="sitl-battery">—</dd></div>
-    <div><dt>도착 셀</dt><dd id="sitl-frames">—</dd></div>
-    <div><dt>비행 시간</dt><dd id="sitl-time">—</dd></div>
+    <div><dt id="sitl-time-label">비행 시간</dt><dd id="sitl-time">—</dd></div>
   </dl>
   <p id="sitl-error" class="sitl-error" role="alert" hidden></p>`;
 
@@ -58,20 +55,20 @@ const card = document.querySelector('.map-card');
 let mode = null, record = null, flight = null, entries = [], shown = -1;
 let mission = null, missionKey = '', reflight = null, routeKey = '';
 let status = null, busy = false, wasFlying = false, stageKey = '', stageSince = 0, pollId = 0;
-let confirmOffUntil = 0, confirmTimer = 0, liveKey = '';
+let confirmOffUntil = 0, confirmTimer = 0, liveKey = '', polled = false;
 
 const clock = seconds => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 
+// Live records keep real seconds, so times on screen are converted to simulated flight time.
+const flightSpeed = () => flight?.speedup ?? 1;
 function renderFacts(state, t) {
   const p = state.position;
   $('sitl-phase').textContent = PHASES[state.phase];
-  $('sitl-cell').textContent = state.last_cell ?? '—';
   $('sitl-alt').textContent = p ? `${p.rel_alt_m.toFixed(1)} m` : '—';
   $('sitl-pos').textContent = p ? `${p.x_m.toFixed(1)}, ${p.y_m.toFixed(1)} m` : '—';
-  $('sitl-heading').textContent = p?.heading == null ? '—' : `${Math.round(p.heading)}°`;
-  $('sitl-battery').textContent = p?.battery == null ? '—' : `${p.battery}%`;
-  $('sitl-frames').textContent = `${state.visited.length} / ${flight.cells.length}`;
-  $('sitl-time').textContent = mode === 'live' ? clock(t) : `${clock(t)} / ${clock(flight.duration_s)}`;
+  const speed = flightSpeed();
+  $('sitl-time-label').textContent = speed > 1 ? `비행 시간 (${speed}배속 환산)` : '비행 시간';
+  $('sitl-time').textContent = mode === 'live' ? clock(t * speed) : `${clock(t)} / ${clock(flight.duration_s)}`;
   if (mission && mission.phase !== 'idle' && p?.battery != null) $('battery').textContent = `${p.battery}%`;
 }
 function renderLog(t) {
@@ -82,7 +79,7 @@ function renderLog(t) {
   if (visible.length < shown || shown < 0) list.replaceChildren();
   for (const entry of visible.slice(list.children.length)) {
     const li = document.createElement('li');
-    const time = document.createElement('time'); time.textContent = clock(entry.t);
+    const time = document.createElement('time'); time.textContent = clock(entry.t * flightSpeed());
     const tag = document.createElement('span'); tag.className = `sitl-tag ${entry.source}`; tag.textContent = SOURCES[entry.source] ?? entry.source;
     const text = document.createElement('span'); text.textContent = entry.text;
     li.append(time, tag, text);
@@ -98,7 +95,7 @@ function syncLiveMission(state, t) {
   const key = `${state.visited.length}:${state.current}:${finished}:${status?.flying}`;
   if (key === liveKey) return;
   liveKey = key;
-  const next = missionFromFlight(state.visited.map(frame => frame.cell_id), state.current, finished, Boolean(status?.flying), Math.floor(t));
+  const next = missionFromFlight(state.visited.map(frame => frame.cell_id), state.current, finished, Boolean(status?.flying), Math.floor(t * flightSpeed()));
   document.dispatchEvent(new CustomEvent('mission:set', { detail: { mission: next } }));
 }
 
@@ -121,7 +118,7 @@ function showFlight(next, source) {
   $('sitl-source').textContent = source;
 }
 function clearFacts() {
-  for (const id of ['phase', 'cell', 'alt', 'pos', 'heading', 'battery', 'frames', 'time']) $(`sitl-${id}`).textContent = '—';
+  for (const id of ['phase', 'alt', 'pos', 'time']) $(`sitl-${id}`).textContent = '—';
 }
 function followMission() {
   if (mode !== 'demo' || !flight || !mission || reflight) return;
@@ -166,7 +163,7 @@ async function fetchFlight(id) {
 
 function renderControls() {
   const power = $('live-power'), fly = $('live-fly'), pill = $('live-pill');
-  if (!status) { power.disabled = fly.disabled = true; pill.textContent = '서버 확인 불가'; pill.dataset.state = 'off'; return; }
+  if (!status) { power.disabled = fly.disabled = true; pill.textContent = polled ? '서버 확인 불가' : '확인 중'; pill.dataset.state = 'off'; return; }
   const seconds = Math.max(0, Math.round((Date.now() - stageSince) / 1000));
   const starting = status.sitl && !status.ready;
   const waiting = status.flying && STAGES[status.stage] && !flight?.frames.length;
@@ -192,6 +189,8 @@ async function loadLive(follow) {
   if (!response.ok) { if (!flight) showFlight(null, 'SITL 비행 없음'); return; }
   const next = await response.json();
   if (!next.positions.length) return;
+  next.speedup = status?.speedup ?? 1;
+  next.capture_s = CAPTURE_S / next.speedup;
   const fresh = !flight || next.duration_s < scene.time() || flight === record;
   showFlightKeepLog(next, fresh);
   if (follow && !fresh) scene.flyTo(next.duration_s, POLL_MS);
@@ -219,6 +218,7 @@ async function poll() {
     if (wasFlying && !status.flying) setMessage(status.mission === 'done' ? '비행을 마치고 착륙했습니다.' : '비행이 완료되지 않았습니다. SITL 상태를 확인한 뒤 다시 시도하세요.', status.mission !== 'done');
     wasFlying = status.flying;
   } catch { status = null; }
+  polled = true;
   renderControls();
 }
 async function act(name, body, doneMessage) {
@@ -278,10 +278,10 @@ async function applyMode(next) {
   if (next === 'live') {
     showError(null);
     stageSince = Date.now(); stageKey = ''; wasFlying = false;
+    await poll();
     const { missions } = await fetch('./api/missions').then(response => response.json()).catch(() => ({ missions: [] }));
     if (missions.includes('live')) await loadLive(false).catch(() => {});
     if (mode !== 'live') return;
-    await poll();
     pollId = setInterval(poll, POLL_MS);
   } else {
     followMission();
@@ -310,12 +310,15 @@ document.addEventListener('mission:change', event => {
 });
 document.addEventListener('dashboard:viewchange', event => {
   const hash = `#${event.detail.id}`;
+  if (!record && !mode) return;
   if (hash === LIVE_HASH) applyMode('live');
   else if (hash === DEMO_HASH) applyMode('demo');
 });
 
 fetchFlight(RECORD_ID).then(next => { record = next; }).catch(() => {}).finally(() => {
-  const start = location.hash === LIVE_HASH ? 'live' : 'demo';
+  // The demo view is off while its menu link is removed; restoring the link brings it back.
+  const demoEnabled = Boolean(document.querySelector(`.dashboard-nav a[href="${DEMO_HASH}"]`));
+  const start = demoEnabled && location.hash !== LIVE_HASH ? 'demo' : 'live';
   if (mode === 'demo' && record) { mode = null; applyMode('demo'); }
   else if (!mode) applyMode(start);
   if (!record && start === 'demo') toggle.set('2d');
