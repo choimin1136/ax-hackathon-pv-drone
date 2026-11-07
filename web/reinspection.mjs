@@ -21,8 +21,10 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
   let confirmed = false;
   let flight = createReflight();
   let timer;
+  // external: the reflight is a real SITL flight started by sitl.mjs, which reports its progress through 'reflight:set'.
+  let external = false, notice = '';
   const busy = () => ['running', 'paused'].includes(flight.phase);
-  function clearFlight() { clearInterval(timer); flight = createReflight(); }
+  function clearFlight() { clearInterval(timer); flight = createReflight(); external = false; notice = ''; }
   function schedule() {
     clearInterval(timer);
     if (flight.phase !== 'running') return;
@@ -116,13 +118,13 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
     const progress = root.querySelector('[data-flight-progress]');
     progress.max = route.length || 1; progress.value = flight.index;
     const labels = {idle:'대기',running:'진행 중',paused:'일시정지',complete:'완료'};
-    root.querySelector('[data-flight-status]').textContent = route.length
-      ? '재비행 ' + labels[flight.phase] + ' · ' + flight.index + '/' + route.length + '곳 · 예시 경과 ' + flight.elapsed + '초' + (flight.phase === 'complete' ? ' · 선택 구역 방문 완료. 새 분석 결과는 없습니다.' : '')
+    root.querySelector('[data-flight-status]').textContent = notice ? notice : route.length
+      ? (external ? 'SITL 재비행 ' : '재비행 ') + labels[flight.phase] + ' · ' + flight.index + '/' + route.length + '곳 · ' + (external ? '비행 경과 ' : '예시 경과 ') + flight.elapsed + '초' + (flight.phase === 'complete' ? ' · 선택 구역 방문 완료. 새 분석 결과는 없습니다.' : '')
       : '전체 점검 완료 후 대상을 선택하고 확정하세요.';
     const play = root.querySelector('[data-flight-play]');
-    play.textContent = flight.phase === 'running' ? '재비행 일시정지' : flight.phase === 'paused' ? '재비행 이어서 재생' : flight.phase === 'complete' ? '선택 구역 다시 재비행' : '선택 구역 재비행 시작';
-    play.disabled = !isMissionComplete() || (!busy() && !confirmed);
-    root.querySelector('[data-flight-reset]').disabled = flight.phase === 'idle';
+    play.textContent = external && flight.phase === 'running' ? 'SITL 재비행 중' : flight.phase === 'running' ? '재비행 일시정지' : flight.phase === 'paused' ? '재비행 이어서 재생' : flight.phase === 'complete' ? '선택 구역 다시 재비행' : '선택 구역 재비행 시작';
+    play.disabled = !isMissionComplete() || (!busy() && !confirmed) || (external && busy());
+    root.querySelector('[data-flight-reset]').disabled = flight.phase === 'idle' || (external && busy());
   }
   root.querySelector('[data-recommend]').onclick = () => {
     selected.clear();
@@ -138,11 +140,31 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
     if (flight.phase === 'running') flight = pauseReflight(flight);
     else {
       if (!busy() && !confirmed) return;
-      if (flight.phase === 'idle') flight = createReflight(selectedTargets(getCells(), selected));
+      if (external && busy()) return;
+      const targets = flight.phase === 'paused' ? flight.targets : selectedTargets(getCells(), selected);
+      const request = new CustomEvent('reflight:start', { cancelable: true, detail: { targets } });
+      document.dispatchEvent(request);
+      if (request.defaultPrevented) {
+        clearInterval(timer);
+        notice = request.detail.notice ?? '';
+        if (request.detail.started) { flight = startReflight(createReflight(targets)); external = true; }
+        onFlightChange();
+        return;
+      }
+      external = false; notice = '';
+      if (flight.phase === 'idle' || flight.phase === 'complete') flight = createReflight(targets);
       flight = startReflight(flight);
     }
     onFlightChange(); schedule();
   };
+  document.addEventListener('reflight:set', event => {
+    const { notice: message, ...next } = event.detail;
+    clearInterval(timer);
+    flight = { ...flight, ...next };
+    external = flight.phase !== 'idle';
+    notice = message ?? '';
+    onFlightChange();
+  });
   root.querySelector('[data-flight-reset]').onclick = () => { clearFlight(); onFlightChange(); };
   root.querySelector('[data-speed]').onchange = schedule;
   return {

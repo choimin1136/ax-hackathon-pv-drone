@@ -56,6 +56,8 @@ let mode = null, record = null, flight = null, entries = [], shown = -1;
 let mission = null, missionKey = '', reflight = null, routeKey = '';
 let status = null, busy = false, wasFlying = false, stageKey = '', stageSince = 0, pollId = 0;
 let confirmOffUntil = 0, confirmTimer = 0, liveKey = '', polled = false;
+// The SITL flight started from the reinspection screen; its arrivals drive the reinspection progress.
+let reflightLive = null, reflightKey = '';
 
 const clock = seconds => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 
@@ -89,8 +91,17 @@ function renderLog(t) {
   shown = visible.length;
 }
 // In the drone-linked view the recorded arrivals decide which cells show a result, so cell clicks work the same way.
+function syncReflight(state, t) {
+  if (!reflightLive || !flight || flight === record) return;
+  const finished = flight.complete && t >= flight.duration_s;
+  const done = state.visited.filter(frame => frame.cell_id !== state.current).length;
+  const key = `${done}:${state.current}:${finished}`;
+  if (key === reflightKey) return;
+  reflightKey = key;
+  document.dispatchEvent(new CustomEvent('reflight:set', { detail: { targets: reflightLive, phase: finished ? 'complete' : 'running', index: finished ? reflightLive.length : done, activeId: finished ? null : state.current, elapsed: Math.floor(t * flightSpeed()) } }));
+}
 function syncLiveMission(state, t) {
-  if (mode !== 'live' || reflight) return;
+  if (mode !== 'live' || reflight || reflightLive) return;
   const finished = flight.complete && t >= flight.duration_s;
   const key = `${state.visited.length}:${state.current}:${finished}:${status?.flying}`;
   if (key === liveKey) return;
@@ -103,9 +114,12 @@ const scene = createScene($('sitl-canvas'), {
   fillOf(id) {
     return CELL_COLORS[mission?.cells.find(cell => cell.cell_id === id)?.status] ?? CELL_COLORS.pending;
   },
-  isActive: id => (reflight ? reflight.activeId : mission?.activeId) === id,
+  isActive: (id, state) => (reflightLive ? state?.current : reflight ? reflight.activeId : mission?.activeId) === id,
   onCellClick: id => [...document.querySelectorAll('#cell-grid .cell')].find(button => button.querySelector('.cell-id')?.textContent === id)?.click(),
-  onRender(state, t) { renderFacts(state, t); renderLog(t); syncLiveMission(state, t); }
+  onRender(state, t) {
+    renderFacts(state, t); renderLog(t); syncLiveMission(state, t); syncReflight(state, t);
+    if (reflightLive && flight && flight !== record) document.dispatchEvent(new CustomEvent('sitl:flight', { detail: { flight, t } }));
+  }
 });
 
 function showFlight(next, source) {
@@ -132,6 +146,13 @@ function followMission() {
 // While a reflight runs, the map shows the same calculated route as the reinspection map.
 function followReflight(next) {
   const active = next && next.phase !== 'idle' ? next : null;
+  if (mode === 'live' && reflightLive) {
+    if (active) { scene.render(); return true; }
+    reflightLive = null; reflightKey = '';
+    document.dispatchEvent(new CustomEvent('sitl:flight', { detail: null }));
+    scene.render();
+    return true;
+  }
   if (!active) {
     if (!reflight) return false;
     reflight = null; routeKey = '';
@@ -215,32 +236,56 @@ async function poll() {
     if (mode !== 'live') return;
     const recordExists = !status.flying || !['gps', 'mission', 'arming'].includes(status.stage);
     if (!reflight && recordExists && (status.flying || wasFlying)) await loadLive(status.flying);
+    if (wasFlying && !status.flying && reflightLive && status.mission !== 'done') {
+      reflightLive = null; reflightKey = '';
+      document.dispatchEvent(new CustomEvent('reflight:set', { detail: { phase: 'idle', targets: [], index: 0, activeId: null, elapsed: 0, notice: 'SITL 재비행이 완료되지 않았습니다. SITL 상태를 확인한 뒤 다시 시작하세요.' } }));
+    }
     if (wasFlying && !status.flying) setMessage(status.mission === 'done' ? '비행을 마치고 착륙했습니다.' : '비행이 완료되지 않았습니다. SITL 상태를 확인한 뒤 다시 시도하세요.', status.mission !== 'done');
     wasFlying = status.flying;
   } catch { status = null; }
   polled = true;
   renderControls();
 }
-async function act(name, body, doneMessage) {
+async function act(name, body, doneMessage, { reflightRun = false } = {}) {
   busy = true; renderControls();
   setMessage('요청 중입니다…');
   try {
     const response = await fetch(`./api/sitl/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) });
-    if (!response.ok) { setMessage(response.status === 409 ? '지금은 실행할 수 없습니다. SITL 준비 상태와 진행 중인 비행을 확인하세요.' : '요청을 처리하지 못했습니다.', true); return; }
+    if (!response.ok) { setMessage(response.status === 409 ? '지금은 실행할 수 없습니다. SITL 준비 상태와 진행 중인 비행을 확인하세요.' : '요청을 처리하지 못했습니다.', true); return false; }
     status = await response.json();
     stageKey = ''; stageSince = Date.now();
     setMessage(doneMessage);
     if (name === 'stop') wasFlying = false;
     if (name === 'fly') {
       wasFlying = true; liveKey = '';
-      document.dispatchEvent(new CustomEvent('mission:set', { detail: { reset: true } }));
+      if (!reflightRun) { reflightLive = null; document.dispatchEvent(new CustomEvent('mission:set', { detail: { reset: true } })); }
       showFlight(null, '● SITL 비행 준비 중');
       clearFacts();
       scene.setTime(0);
     }
-  } catch { setMessage('서버에 연결하지 못했습니다.', true); }
+    return true;
+  } catch { setMessage('서버에 연결하지 못했습니다.', true); return false; }
   finally { busy = false; renderControls(); }
 }
+// Reinspection asks first; in the drone-linked view the reflight becomes a real SITL flight.
+document.addEventListener('reflight:start', event => {
+  if (mode !== 'live') return;
+  event.preventDefault();
+  const { targets } = event.detail;
+  if (!status?.ready || status.flying) {
+    event.detail.notice = !status?.sitl ? 'SITL이 꺼져 있습니다. 점검 현황에서 SITL을 켠 뒤 다시 시작하세요.' : status.flying ? '다른 비행이 진행 중입니다. 끝난 뒤 다시 시작하세요.' : 'SITL이 아직 준비 중입니다. 잠시 후 다시 시작하세요.';
+    return;
+  }
+  event.detail.started = true;
+  reflightLive = [...targets]; reflightKey = '';
+  // Drop the previous flight now so its finished state is not reported as this reflight.
+  showFlight(null, '● SITL 재비행 준비 중'); clearFacts(); scene.setTime(0);
+  act('fly', { cells: targets.join(',') }, `선택 구역 ${targets.length}곳을 SITL로 재비행합니다.`, { reflightRun: true }).then(ok => {
+    if (ok) return;
+    reflightLive = null;
+    document.dispatchEvent(new CustomEvent('reflight:set', { detail: { phase: 'idle', targets: [], index: 0, activeId: null, elapsed: 0, notice: 'SITL 재비행을 시작하지 못했습니다. 점검 현황에서 SITL 상태를 확인하세요.' } }));
+  });
+});
 function resetConfirm() {
   confirmOffUntil = 0;
   clearTimeout(confirmTimer);
@@ -301,7 +346,8 @@ document.addEventListener('mission:change', event => {
   mission = event.detail;
   const next = mission.reflight;
   const key = `${mission.phase}:${mission.index}:${mission.activeId}:${$('speed').value}:${next?.targets.join(',')}:${next?.phase}:${next?.index}:${next?.activeId}:${document.querySelector('#reinspection [data-speed]')?.value}`;
-  if (mode === 'live' && !next?.targets.length) { $('mission-copy').textContent = status?.flying ? '서버의 SITL 드론이 구역을 비행하고 있습니다.' : 'SITL을 켠 뒤 비행을 시작하세요. 도착한 구역부터 결과가 표시됩니다.'; }
+  if (mode === 'live' && reflightLive) $('mission-copy').textContent = next?.phase === 'complete' ? '재점검 대상 구역의 SITL 재비행을 마쳤습니다.' : '재점검 대상 구역을 SITL로 다시 비행하고 있습니다.';
+  else if (mode === 'live' && !next?.targets.length) { $('mission-copy').textContent = status?.flying ? '서버의 SITL 드론이 구역을 비행하고 있습니다.' : 'SITL을 켠 뒤 비행을 시작하세요. 도착한 구역부터 결과가 표시됩니다.'; }
   if (key === missionKey) { scene.render(); return; }
   missionKey = key;
   if ((record || mode === 'live') && followReflight(next)) return;
