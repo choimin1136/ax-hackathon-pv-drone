@@ -28,7 +28,7 @@ export function createValueResults({ getCells }) {
     ['carbon','탄소 계수 (kgCO₂e/kWh)'], ['repair','구역당 수리비 (원)'],
     ['low','출력 저하율 낮음 (%)'], ['base','출력 저하율 기준 (%)'], ['high','출력 저하율 높음 (%)']
   ];
-  root.innerHTML = `<div class="card-heading"><div><p class="eyebrow">ESTIMATED IMPACT</p><h2>금전·공공 가치 결과</h2></div><span class="demo-chip">추정 · 시뮬레이션</span></div>
+  root.innerHTML = `<div class="card-heading"><div><p class="eyebrow">ESTIMATED IMPACT</p><h2>점검 분석</h2></div><span class="demo-chip">추정 · 시뮬레이션</span></div>
     <p>사람이 승인한 후보가 있는 구역만 한 번씩 계산합니다. 모든 구역에 같은 용량·이용률·단가를 적용하는 예시입니다.</p>
     <p>기본값은 계산 시연용이며 실제 단가·공식 탄소 계수·실측 저하율이 아닙니다. 수리 후 가정한 손실을 모두 회수할 때의 연간 잠재 가치이며, 실제 수익이나 감축 실적을 보장하지 않습니다.</p>
     <fieldset><legend>계산 가정값 · 직접 수정 가능</legend><div class="value-fields"></div><button type="button" data-value-reset>예시 가정값으로 복원</button></fieldset>

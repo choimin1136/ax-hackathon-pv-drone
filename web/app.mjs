@@ -16,10 +16,6 @@ const detail = createDetail({getCell:id=>state.cells.find(c=>c.cell_id===id),onC
 const reinspection = createReinspection({getCells:()=>state.cells,getSummary:cell=>detail.summary(cell),isMissionComplete:()=>state.phase==='complete',onFlightChange:()=>render()});
 const valueResults = createValueResults({getCells:()=>state.cells});
 createReport({getSnapshot:()=>({mission:state,candidates:state.cells.flatMap(c=>detail.candidates(c)),assumptions:valueResults.assumptions()})});
-const detailButton=document.createElement('button');
-detailButton.type='button';detailButton.className='primary';detailButton.textContent='이미지 · 후보 확인';
-detailButton.onclick=()=>detail.open(selected);
-document.querySelector('.detail-card').append(detailButton);
 const clock = seconds => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 const cells = new Map();
 for (const id of CELL_IDS) {
@@ -27,7 +23,7 @@ for (const id of CELL_IDS) {
   button.type = 'button';
   button.className = 'cell pending';
   button.innerHTML = `<span class="panel-lines" aria-hidden="true"></span><span class="cell-id">${id}</span><span class="cell-symbol" aria-hidden="true">·</span><span class="drone-marker" aria-hidden="true" hidden>✣</span>`;
-  button.addEventListener('click', () => { selected = id; render(); });
+  button.addEventListener('click', () => { selected = id; render(); detail.open(id); });
   $('cell-grid').append(button);
   cells.set(id, button);
 }
@@ -43,12 +39,10 @@ function renderRoute() {
 }
 function render() {
   const summary = summarize(state);
-  $('completed-count').textContent = summary.completed;
   $('clear-count').textContent = summary.clear;
   $('review-count').textContent = summary.review;
   $('retake-count').textContent = summary.retake;
   const percent = Math.round(summary.completed / 24 * 100);
-  $('mini-progress').style.width = `${percent}%`;
   $('progress').value = summary.completed;
   $('progress').textContent = `${percent}%`;
   $('progress-text').textContent = `${percent}%`;
