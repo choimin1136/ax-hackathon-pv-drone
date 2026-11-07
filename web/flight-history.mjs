@@ -15,7 +15,7 @@ export function createFlightHistory({getCandidates}) {
   surface.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
   surface.querySelector('.grid-stage svg').innerHTML='<polyline/>';
   surface.querySelector('.cell-grid').replaceChildren();
-  surface.querySelector('.map-caption span span').textContent='저장된 점검 결과 · 예시';
+  surface.querySelector('.map-caption span span').textContent='저장된 점검 결과';
   surface.querySelector('.map-bottom>span').textContent='비행 당시 구역 상태 · 합성 판정/이미지';
   panel.append(surface);root.insertBefore(panel,note);
   let activeId=null;
@@ -41,7 +41,7 @@ export function createFlightHistory({getCandidates}) {
   surface.querySelector('input').onchange=drawRoute;new ResizeObserver(drawRoute).observe(surface.querySelector('.cell-grid'));
   function showMap(id){
     activeId=id;const saved=current();if(!saved)return;
-    surface.querySelector('.map-bottom>span').textContent=saved.kind==='selection'?'이번 비행에서 방문 완료한 구역만 표시 · 새 분석이 아닌 합성 예시':'비행 당시 구역 상태 · 합성 판정/이미지';
+    surface.querySelector('.map-bottom>span').textContent=saved.cells.some(c=>c.model)?'비행 당시 저장한 사진·모델 결과 · 미방문 구역 제외':'사진·모델 결과가 저장되지 않은 이전 기록 · 합성 예시';
     list.hidden=true;columns.hidden=true;panel.hidden=false;
     panel.querySelector('[data-date]').textContent=formatStarted(saved.startedAt)+' · '+phaseLabel(saved.phase)+' · 서버 파일 생성 시각';
     const grid=surface.querySelector('.cell-grid');grid.replaceChildren();
@@ -75,7 +75,7 @@ export function createFlightHistory({getCandidates}) {
       remove.onclick=()=>{deleteId=r.id;deleteDialog.returnValue='';deleteDialog.querySelector('[data-delete-date]').textContent=formatStarted(r.startedAt)+' · '+type.textContent;deleteDialog.showModal();};
       li.append(button,remove);list.append(li);
     }
-    note.textContent=store.error()||'서버 공용 기록 · 파일 생성 시각(한국 시간) · 합성 판정/이미지 · 셀을 눌러 승인·제외';
+    note.textContent=store.error()||'서버 공용 기록 · 파일 생성 시각(한국 시간) · 셀을 눌러 저장 결과 확인·승인·제외';
   }
   renderList();
   store.refresh();setInterval(()=>store.refresh(),5000);

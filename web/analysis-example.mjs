@@ -35,7 +35,7 @@ export function createAnalysisExample({host,onChange}) {
   }
   select.onchange=()=>{start();onChange();};retry.onclick=()=>{start();onChange();};
   return {
-    setCell(next) {const signature=JSON.stringify([next?.cell_id,next?.status,next?.candidate_count]);if(signature===key)return;key=signature;cell=next;select.value='normal';start();},
+    setCell(next) {const signature=JSON.stringify([next?.cell_id,next?.status,next?.candidate_count,next?.model]);if(signature===key)return;key=signature;cell=next;select.value='normal';start();},
     result:()=>outcome.result,
     ready:()=>['success','fallback'].includes(outcome.state),
     close() {stop();key='';outcome={state:'unavailable',result:null};}

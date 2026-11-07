@@ -16,7 +16,9 @@ export function createInspectionHistory({file,flightDir}) {
       let rows,info;try{info=await stat(path.join(flightDir,name));rows=(await readFile(path.join(flightDir,name),'utf8')).split('\n').flatMap(line=>{try{return [JSON.parse(line)];}catch{return [];}});}catch{continue;}
       const start=rows.find(r=>r.type==='mission_start');if(!start)continue;
       const id=createHash('sha256').update(name+':'+info.birthtimeMs+':'+JSON.stringify(start)).digest('hex').slice(0,32);
-      const existing=records.find(r=>r.id===id);if(existing?.deletedAt || existing?.phase==='complete')continue;
+      const existing=records.find(r=>r.id===id);if(existing?.deletedAt)continue;
+      if(existing && existing.sourceFile!==name){existing.sourceFile=name;changed=true;}
+      if(existing?.phase==='complete')continue;
       const targets=[...new Set((start.cells??[]).filter(id=>CELL_IDS.includes(id)))];
       const visited=[...new Set(rows.filter(r=>r.type==='frame'&&targets.includes(r.cell_id)).map(r=>r.cell_id))];
       const end=rows.find(r=>r.type==='mission_end');
@@ -24,15 +26,40 @@ export function createInspectionHistory({file,flightDir}) {
       if(existing&&existing.phase===phase&&existing.visited.join()===visited.join())continue;
       const cells=missionFromFlight(visited,null,!!end,!end).cells.map(c=>{
         const previous=existing?.cells.find(old=>old.cell_id===c.cell_id);
+        if(previous?.model)return previous;
         const candidates=candidatesFor(c).map(p=>({...p,decision:previous?.candidates.find(old=>old.id===p.id)?.decision??'pending'}));
         return {...c,candidates,confirmed_count:candidates.filter(p=>p.decision==='approved').length};
       });
-      const record={id,startedAt:info.birthtime.toISOString(),endedAt:end?info.mtime.toISOString():null,timeBasis:'server-file-created',kind:targets.length===24?'full':'selection',source:'server-flight',targets,visited,phase,cells};
+      const record={id,sourceFile:name,startedAt:info.birthtime.toISOString(),endedAt:end?info.mtime.toISOString():null,timeBasis:'server-file-created',kind:targets.length===24?'full':'selection',source:'server-flight',targets,visited,phase,cells};
       if(existing)Object.assign(existing,record);else records.push(record);changed=true;
     }
     if(changed)await save(records);return records;
   }
   return {
+    predictionTarget:cellId=>run(async()=>{
+      const records=await ingest(await load());
+      let info,start;
+      try {
+        info=await stat(path.join(flightDir,'live.jsonl'));
+        start=(await readFile(path.join(flightDir,'live.jsonl'),'utf8')).split('\n').flatMap(line=>{try{return [JSON.parse(line)];}catch{return [];}}).find(r=>r.type==='mission_start');
+      }catch{return null;}
+      if(!start)return null;
+      const id=createHash('sha256').update('live.jsonl:'+info.birthtimeMs+':'+JSON.stringify(start)).digest('hex').slice(0,32);
+      return records.find(r=>r.id===id&&!r.deletedAt&&r.targets.includes(cellId)&&r.visited.includes(cellId))?.id??null;
+    }),
+    savePrediction:(id,cellId,result)=>run(async()=>{
+      const records=await load(),record=records.find(r=>r.id===id&&!r.deletedAt);
+      if(!record||!record.visited.includes(cellId)||!record.targets.includes(cellId)||result.status||!result.photo)return;
+      const cell=record.cells.find(c=>c.cell_id===cellId);
+      // First successful response is the historical snapshot. Repeated readers cannot overwrite reviews.
+      if(!cell||cell.model)return;
+      cell.model={photo:result.photo,probability:result.probability,calibrated:result.calibrated,
+        image_size:result.image_size,regions:result.is_hotspot?result.regions:[],overlay:result.output??null};
+      cell.status=result.is_hotspot?'check':'no_candidate';
+      cell.candidates=candidatesFor(cell).map(c=>({...c,decision:'pending'}));
+      cell.candidate_count=cell.candidates.length;cell.confirmed_count=0;
+      await save(records);
+    }),
     list:()=>run(async()=>(await ingest(await load())).filter(r=>!r.deletedAt)),
     remove:id=>run(async()=>{
       const records=await ingest(await load()),record=records.find(r=>r.id===id&&!r.deletedAt);
