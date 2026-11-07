@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
-const DEFAULT_MODEL_URL = 'https://aiopen-serving.jntp-ax.or.kr/jntp-gpu/SV-fc7f6908/predict';
+const DEFAULT_MODEL_URL = 'https://aiopen-serving.jntp-ax.or.kr/jntp-gpu/SV-5b69676e/predict';
 const CELL = /^[A-D]-[1-6]$/;
 const PHOTO = /\.(jpe?g|png)$/i;
 const TIMEOUT_MS = 30000;
