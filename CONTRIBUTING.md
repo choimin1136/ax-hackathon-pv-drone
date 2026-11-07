@@ -48,9 +48,9 @@ gh pr create --base main --fill
 
 PR에는 무엇을 바꿨는지와 어떻게 확인했는지를 적습니다.
 
-### 4. 리뷰하고 합치기
+### 4. 합치기
 
-다른 팀원 1명이 확인한 뒤 squash merge합니다.
+승인 없이 직접 squash merge합니다. 다른 팀원의 작업에 영향을 주는 변경은 merge 전에 팀에 알립니다.
 
 ```bash
 gh pr merge --squash --delete-branch
