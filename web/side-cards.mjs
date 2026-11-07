@@ -17,12 +17,14 @@ export function makeCollapsible(card, heading, name) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'collapse-toggle';
+  button.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 10l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   heading.classList.add('collapse-head');
   heading.append(button);
   const set = collapsed => {
     card.dataset.collapsed = String(collapsed);
-    button.textContent = collapsed ? '펼치기 ▾' : '접기 ▴';
     button.setAttribute('aria-expanded', String(!collapsed));
+    button.setAttribute('aria-label', `${heading.querySelector('h3')?.textContent ?? ''} ${collapsed ? '펼치기' : '접기'}`);
+    button.title = collapsed ? '펼치기' : '접기';
   };
   set(Boolean(saved[name]));
   button.addEventListener('click', () => {

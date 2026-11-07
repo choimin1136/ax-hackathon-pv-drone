@@ -87,10 +87,13 @@
 /* Right-column cards fold down to their heading. */
 .collapse-head {display:flex;align-items:center;gap:8px;}
 .collapse-head>span:not(.phase-pill) {margin-left:auto;}
-.collapse-toggle {flex:none;padding:4px 9px;border:1px solid var(--line);border-radius:7px;font-size:11px;font-weight:600;color:#52647e;background:#fff;cursor:pointer;}
+.collapse-toggle {display:grid;flex:none;place-items:center;width:26px;height:26px;padding:0;border:1px solid var(--line);border-radius:7px;color:#52647e;background:#fff;cursor:pointer;}
+.collapse-toggle:hover {color:#245bc2;background:#f3f6fb;}
+.collapse-toggle svg {transition:transform .15s;}
+[data-collapsed="true"] .collapse-toggle svg {transform:rotate(180deg);}
+@media(prefers-reduced-motion:reduce) {.collapse-toggle svg {transition:none;}}
 .collapse-head>span+.collapse-toggle {margin-left:0;}
 .collapse-head>h3+.collapse-toggle,.collapse-head>div+.collapse-toggle {margin-left:auto;}
-.mission-card .collapse-head .phase-pill {margin-left:auto;}
 [data-collapsed="true"]>:not(.collapse-head) {display:none!important;}
 [data-collapsed="true"]>.collapse-head {margin-bottom:0;}
 .thermal-card {min-width:0;padding:16px 20px;border:1px solid var(--line);border-radius:16px;background:#fff;}

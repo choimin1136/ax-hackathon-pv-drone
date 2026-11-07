@@ -55,7 +55,6 @@ document.querySelector('.map-card .legend').after(document.querySelector('.overv
 const openCell = id => [...document.querySelectorAll('#cell-grid .cell')].find(button => button.querySelector('.cell-id')?.textContent === id)?.click();
 const thermal = createThermalCard({ onOpen: openCell });
 document.querySelector('.mission-card').after(thermal.element);
-makeCollapsible(document.querySelector('.mission-card'), document.querySelector('.mission-card .card-heading'), 'mission');
 for (const [card, name] of [[thermal.element, 'thermal'], [hudCard, 'hud'], [logCard, 'log']]) makeCollapsible(card, card.querySelector('.sitl-log-title'), name);
 
 const controls = document.createElement('div');
