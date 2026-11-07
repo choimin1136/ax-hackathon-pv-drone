@@ -23,7 +23,7 @@ export function createDetailMedia({host,onReady}) {
   }
   // A cell judged by the hotspot model shows its real photo; the overlay is the model's painted result image.
   async function loadModel(token) {
-    const name=encodeURIComponent(cell.model.photo), [w,h]=cell.model.image_size??[640,512];
+    const name=encodeURIComponent(cell.model.photo), overlay=cell.model.overlay ?? `./api/overlay?name=${encodeURIComponent(cell.model.photo)}`, [w,h]=cell.model.image_size??[640,512];
     host.querySelector('.media-controls').hidden=true;
     host.querySelector('[data-highlight]').setAttribute('viewBox',`0 0 ${w} ${h}`);
     photo.alt=`${cell.cell_id} 구역 열화상 사진`;mask.alt='핫스팟 모델이 표시한 결과 이미지';
@@ -37,7 +37,7 @@ export function createDetailMedia({host,onReady}) {
       host.querySelector('.media-controls').hidden=false;select.disabled=true;
       host.setAttribute('aria-busy','false');return;
     }
-    try { await decode(`./api/overlay?name=${name}`); if(!generation.current(token))return; mask.src=`./api/overlay?name=${name}`; } catch {}
+    try { await decode(overlay); if(!generation.current(token))return; mask.src=overlay; } catch {}
     status.textContent=candidates.length?`모델 결과 · 하늘색 상자 ${candidates.length}곳이 모델이 찾은 영역입니다. 결함 영역 표시를 켜면 모델 결과 이미지를 겹칩니다.`:'모델 결과 · 핫스팟을 찾지 못했습니다. 안전을 보증하는 결과는 아닙니다.';
     overlays();host.setAttribute('aria-busy','false');
   }
@@ -79,7 +79,7 @@ export function createDetailMedia({host,onReady}) {
   }
   select.onchange=()=>{mode=select.value;load();}; retry.onclick=()=>load();
   return {
-    setCell(next,list) {const nextKey=JSON.stringify([next?.cell_id,next?.status,list]);if(nextKey===key)return;key=nextKey;cell=next;candidates=list;mode='normal';select.value=mode;load();},
+    setCell(next,list) {const nextKey=JSON.stringify([next?.cell_id,next?.status,next?.model,list]);if(nextKey===key)return;key=nextKey;cell=next;candidates=list;mode='normal';select.value=mode;load();},
     display(show,id) {showMask=show;highlighted=id;overlays();},
     close() {cancel();key='';ready=false;},
     ready:()=>ready

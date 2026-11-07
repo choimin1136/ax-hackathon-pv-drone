@@ -110,8 +110,15 @@ export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, 
     }
     const cell = pathname.match(/^\/api\/predict\/([^/]+)$/);
     if (cell) {
-      const result = await predictor.predict(cell[1]);
-      return sendJson(res, result.status ?? 200, result, head);
+      // Bind before inference: a slow response must never be written into the next flight.
+      try {
+        const recordId = await history.predictionTarget(cell[1]);
+        const result = await predictor.predict(cell[1]);
+        if(recordId && !result.status) await history.savePrediction(recordId,cell[1],result);
+        return sendJson(res, result.status ?? 200, result, head);
+      } catch {
+        return sendJson(res,503,{error:'prediction history storage unavailable'},head);
+      }
     }
     if (pathname === '/api/missions') {
       const files = await readdir(flightDir).catch(() => []);
