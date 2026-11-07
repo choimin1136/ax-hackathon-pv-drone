@@ -76,9 +76,10 @@ test('finds photos in AI Hub style subfolders and skips label files', () => with
   const fetchImpl = async (url, { body }) => { sent.push(body.get('file').name); return new Response(JSON.stringify(answer(true))); };
   const predictor = createPredictor({ env: { PHOTO_DIR: dir }, fetchImpl, random: () => 0 });
   assert.deepEqual(await predictor.status(), { configured: true, photos: 2 });
-  assert.equal((await predictor.predict('A-1')).photo, path.join('TS_Normal', 'n1.jpg'));
-  assert.equal((await predictor.predict('A-2')).photo, path.join('TS_Positive', 'p1.jpg'));
-  assert.deepEqual(sent, ['n1.jpg', 'p1.jpg']);
+  // random() = 0 makes A-1 the flight's hotspot cell, so it takes the photo from the hotspot folder.
+  assert.equal((await predictor.predict('A-1')).photo, path.join('TS_Positive', 'p1.jpg'));
+  assert.equal((await predictor.predict('A-2')).photo, path.join('TS_Normal', 'n1.jpg'));
+  assert.deepEqual(sent, ['p1.jpg', 'n1.jpg']);
 }));
 
 test('the detail view reads back only listed photos and the model overlay', () => withPhotos(['TS_Positive/p1.jpg', 'notes.txt'], async dir => {
@@ -97,3 +98,18 @@ test('a model-judged cell lists the model regions as candidates with stable ids'
   assert.deepEqual(mission.cells.find(c => c.cell_id === 'B-2').model, cell.model);
   assert.equal(candidatesFor({ cell_id: 'A-1', candidate_count: 1 })[0].id, 'A-1-h1');
 });
+
+test('every full flight has one early hotspot cell, re-drawn until the model flags it', () => withPhotos(['TS_Positive/p1.jpg', 'TS_Positive/p2.jpg', 'TS_Positive/p3.jpg', 'TS_Normal/n1.jpg', 'TS_Normal/n2.jpg'], async dir => {
+  // p1 is labelled positive but the model misses it; p2 and p3 are flagged.
+  const fetchImpl = async (url, { body }) => new Response(JSON.stringify(answer(body.get('file').name !== 'p1.jpg' && body.get('file').name.startsWith('p'))));
+  const draws = [0.5, 0, 0, 0];
+  const predictor = createPredictor({ env: { PHOTO_DIR: dir }, fetchImpl, random: () => draws.shift() ?? 0 });
+  const hot = predictor.hotCell();
+  assert.equal(hot, 'B-6', 'the cell is drawn from the first two rows');
+  const [first, again] = await Promise.all([predictor.predict(hot), predictor.predict(hot)]);
+  assert.deepEqual([first.is_hotspot, first.photo], [true, path.join('TS_Positive', 'p2.jpg')], 'the missed photo is swapped');
+  assert.equal(again.photo, first.photo, 'concurrent requests share one answer');
+  assert.equal((await predictor.predict(hot)).photo, first.photo, 'the cell keeps its photo during the flight');
+  predictor.shuffle();
+  assert.ok(['A-1', 'A-2', 'A-3', 'A-4', 'A-5', 'A-6', 'B-6', 'B-5', 'B-4', 'B-3', 'B-2', 'B-1'].includes(predictor.hotCell()));
+}));
