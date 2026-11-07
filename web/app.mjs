@@ -122,6 +122,16 @@ $('reset').addEventListener('click', () => {
   $('announcement').textContent = '미션이 처음 상태로 돌아갔습니다.';
 });
 $('speed').addEventListener('change', schedule);
+// The drone-linked view feeds real flight progress in here instead of the demo timer.
+document.addEventListener('mission:set', event => {
+  clearInterval(timer);
+  if (event.detail.reset) { detail.reset(); reinspection.reset(); state = createMission(); selected = 'A-1'; }
+  else {
+    const reviewed = new Map(state.cells.map(cell => [cell.cell_id, cell.confirmed_count]));
+    state = {...event.detail.mission, cells: event.detail.mission.cells.map(cell => ({...cell, confirmed_count: reviewed.get(cell.cell_id) ?? 0}))};
+  }
+  render();
+});
 $('show-route').addEventListener('change', renderRoute);
 new ResizeObserver(renderRoute).observe($('cell-grid'));
 render();

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMission, startMission, pauseMission, tickMission, summarize, ROUTE } from '../web/mission.mjs';
+import { createMission, missionFromFlight, startMission, pauseMission, tickMission, summarize, ROUTE } from '../web/mission.mjs';
 
 test('visits all 24 areas once and keeps failed capture out of no-candidate results', () => {
   let mission = startMission(createMission());
@@ -29,4 +29,19 @@ test('replay starts clean without carrying over statuses or event counts', () =>
   assert.equal(replay.events.length, 0);
   assert.ok(replay.cells.every(c => c.status === 'pending'));
   assert.equal(replay.elapsed, 0);
+});
+test('a real flight shows results only for arrived cells and matches the demo at the end', () => {
+  const flying = missionFromFlight(['C-4', 'C-5'], 'C-5', false, true, 12);
+  assert.equal(flying.phase, 'running');
+  assert.equal(flying.index, 1);
+  assert.equal(flying.activeId, 'C-5');
+  assert.equal(flying.cells.find(c => c.cell_id === 'C-4').status, 'check');
+  assert.equal(flying.cells.find(c => c.cell_id === 'C-5').status, 'pending');
+  assert.equal(missionFromFlight(['C-4'], null, false, false).phase, 'paused');
+  let demo = startMission(createMission());
+  for (let i = 0; i < 48; i++) demo = tickMission(demo);
+  const done = missionFromFlight(ROUTE, null, true, false, 68);
+  assert.equal(done.phase, 'complete');
+  assert.deepEqual(summarize(done), summarize(demo));
+  assert.deepEqual(done.cells.map(c => c.status), demo.cells.map(c => c.status));
 });

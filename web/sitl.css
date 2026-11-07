@@ -35,18 +35,26 @@
 .reflight-stage {position:relative;height:260px;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:#f1f5fb;}
 .reflight-stage canvas {display:block;width:100%;height:100%;cursor:grab;touch-action:pan-y;}
 .reflight-stage canvas:active {cursor:grabbing;}
-.sim-card {padding:28px;border:1px solid var(--line);border-radius:14px;background:#fff;}
-.sim-pill {padding:6px 11px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;color:#52647e;background:#eef2f8;}
+.flight-log-card {min-width:0;padding:16px 20px;border:1px solid var(--line);border-radius:16px;background:#fff;}
+.flight-log-card .sitl-log {height:240px;margin:0;}
+#overview[data-mode="live"] #play,#overview[data-mode="live"] .play-options {display:none;}
+#overview[data-mode="demo"] .live-controls,#overview:not([data-mode]) .live-controls {display:none;}
+.live-controls {display:grid;gap:10px;margin:14px 0 4px;}
+.live-status {display:flex;}
+.sim-pill {padding:6px 11px;border-radius:999px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:#52647e;background:#eef2f8;}
 .sim-pill[data-state="on"] {color:#245bc2;background:#edf3ff;}
+.sim-pill[data-state="busy"] {color:#8a5a00;background:#fff4d6;animation:sim-pulse 1.2s ease-in-out infinite;}
 .sim-pill[data-state="flying"] {color:#fff;background:#087d57;}
-.sim-controls {display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-bottom:8px;}
-.sim-controls label {display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--muted);}
-.sim-controls input,.sim-controls select {height:40px;padding:0 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:#17243b;background:#fff;}
-.sim-controls button {height:40px;padding:0 16px;border:1px solid #cfdaea;border-radius:8px;font-size:13px;font-weight:600;color:#245bc2;background:#fff;}
-.sim-controls .primary {width:auto;min-width:130px;margin:0;color:#fff;background:#2563eb;border-color:#2563eb;}
-.sim-controls button.sim-warning {color:#fff;background:#c63038;border-color:#c63038;}
-.sim-message {min-height:20px;margin:0 0 12px;font-size:12px;color:var(--muted);}
+@keyframes sim-pulse {50% {opacity:.55;}}
+@media(prefers-reduced-motion:reduce) {.sim-pill[data-state="busy"] {animation:none;}}
+.live-controls label {display:grid;gap:5px;font-size:11px;color:var(--muted);}
+.live-controls select {width:100%;height:40px;padding:0 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:#17243b;background:#fff;}
+#live-power {width:100%;height:40px;border:1px solid #cfdaea;border-radius:8px;font-size:13px;font-weight:600;color:#245bc2;background:#fff;}
+#live-power.sim-warning {color:#fff;background:#c63038;border-color:#c63038;}
+.live-controls .primary {width:100%;margin:0;}
+.sim-message {min-height:18px;margin:0;font-size:12px;line-height:1.5;color:var(--muted);}
 .sim-message.error {color:#c63038;}
-.sim-card .sitl-copy strong {color:#17243b;}
-.sim-card .sitl-stage {margin-bottom:14px;}
-@media(max-width:520px) {.sim-card {padding:16px;}.sim-controls label,.sim-controls button,.sim-controls .primary {width:100%;}.sim-controls input,.sim-controls select {width:100%;}}
+#overview .side-column {display:flex;flex-direction:column;height:auto;align-self:start;}
+#overview .side-column>* {flex:none;}
+#overview .mission-card {height:auto;max-height:none;min-height:0;overflow:visible;}
+.live-buttons {display:grid;grid-template-columns:1fr 1fr;gap:8px;}

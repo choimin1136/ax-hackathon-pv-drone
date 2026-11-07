@@ -32,6 +32,26 @@ export function tickMission(state) {
   const event = { cell_id: id, status, elapsed, candidate_count };
   return { ...state, elapsed, index, activeId: null, phase: index === ROUTE.length ? 'complete' : 'running', cells: state.cells.map(cell => cell.cell_id === id ? { ...cell, status, candidate_count } : cell), events: [event, ...state.events] };
 }
+// Builds the same mission state from a real flight, so cells show their example result once the drone has arrived.
+export function missionFromFlight(visited, activeId, finished, flying, elapsed = 0) {
+  const done = new Set(visited.filter(id => id !== activeId));
+  const events = [...done].reverse().map(cell_id => {
+    const [status, candidate_count] = examples[cell_id] ?? ['no_candidate', 0];
+    return { cell_id, status, elapsed, candidate_count };
+  });
+  return {
+    phase: finished ? 'complete' : flying ? 'running' : 'paused',
+    index: done.size,
+    activeId,
+    elapsed,
+    cells: CELL_IDS.map(cell_id => {
+      if (!done.has(cell_id)) return { cell_id, status: 'pending', candidate_count: 0, confirmed_count: 0 };
+      const [status, candidate_count] = examples[cell_id] ?? ['no_candidate', 0];
+      return { cell_id, status, candidate_count, confirmed_count: 0 };
+    }),
+    events
+  };
+}
 export function summarize(state) {
   return { completed: state.index, clear: state.cells.filter(c => c.status === 'no_candidate').length, review: state.cells.filter(c => c.status === 'caution' || c.status === 'check').length, retake: state.cells.filter(c => c.status === 'retake').length };
 }

@@ -1,7 +1,8 @@
 // Keep views mounted so navigation preserves mission and review state.
 const menu = document.querySelector('.dashboard-nav');
 const links = [...menu.querySelectorAll('nav a')];
-const sections = links.map(link => document.querySelector(link.hash));
+// Both overview links share one section; the link decides which drone source it shows.
+const sections = links.map(link => document.querySelector(link.dataset.section ?? link.hash));
 const mobile = matchMedia('(max-width: 850px)');
 const syncMenu = () => { menu.open = !mobile.matches; };
 syncMenu();
@@ -11,7 +12,7 @@ function showView(moveFocus = false) {
   const match = links.findIndex(link => link.hash === location.hash);
   const current = match < 0 ? 0 : match;
   sections.forEach((section, index) => {
-    section.hidden = index !== current;
+    section.hidden = section !== sections[current];
     section.classList.add('dashboard-view');
   });
   links.forEach((link, index) => {
@@ -19,13 +20,13 @@ function showView(moveFocus = false) {
     else link.removeAttribute('aria-current');
   });
   if (mobile.matches) menu.open = false;
-  document.title = `${sections[current].getAttribute('aria-label') || '점검 기록'} · Solar Loop`;
+  document.title = `${links[current].lastChild.textContent.trim() || '점검 기록'} · Solar Loop`;
   if (moveFocus) {
     sections[current].tabIndex = -1;
     sections[current].focus({preventScroll: true});
     window.scrollTo({top: 0, behavior: 'instant'});
   }
-  document.dispatchEvent(new CustomEvent('dashboard:viewchange', {detail: {id: sections[current].id}}));
+  document.dispatchEvent(new CustomEvent('dashboard:viewchange', {detail: {id: links[current].hash.slice(1)}}));
   // The map's existing ResizeObserver redraws its route on return.
 }
 links.forEach(link => link.addEventListener('click', event => {
