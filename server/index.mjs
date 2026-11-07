@@ -2,11 +2,14 @@ import http from 'node:http';
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { createSitlControl, tokenMatches } from './sitl-control.mjs';
 
 const DEFAULT_WEB = fileURLToPath(new URL('../web/', import.meta.url));
 const DEFAULT_FLIGHTS = fileURLToPath(new URL('../drone/sample_flight/', import.meta.url));
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8' };
 const MISSION_ID = /^[A-Za-z0-9_-]{1,64}$/;
+const MAX_BODY = 1024;
+const FAILURE_DELAY_MS = 1000;
 
 // A flight in progress can leave a half-written last line, so unreadable lines are skipped.
 export function parseFlight(text) {
@@ -33,16 +36,29 @@ export function summarizeFlight(missionId, rows) {
   };
 }
 
+function readJson(req) {
+  return new Promise((resolve, reject) => {
+    let text = '';
+    req.on('data', chunk => {
+      text += chunk;
+      if (text.length > MAX_BODY) { reject(new Error('too large')); req.destroy(); }
+    });
+    req.on('end', () => { try { resolve(text ? JSON.parse(text) : {}); } catch (error) { reject(error); } });
+    req.on('error', reject);
+  });
+}
+
 function sendJson(res, status, body, head) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
   res.end(head ? undefined : JSON.stringify(body));
 }
 
-export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, basePath = '' } = {}) {
+export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, basePath = '', operatorToken = process.env.OPERATOR_TOKEN ?? '', sitlEnv = process.env, sitlHooks = {}, sitlArgsForTest, failureDelayMs = FAILURE_DELAY_MS } = {}) {
   const base = basePath.replace(/\/+$/, '');
+  const sitl = createSitlControl({ flightDir, env: sitlEnv, sitlArgs: sitlArgsForTest, ...sitlHooks });
+  const actions = { start: () => sitl.start(), stop: () => sitl.stop(), fly: body => sitl.fly(body.cells ?? null) };
   return http.createServer(async (req, res) => {
     const head = req.method === 'HEAD';
-    if (req.method !== 'GET' && !head) { res.writeHead(405); res.end(); return; }
     let pathname;
     try { pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname); }
     catch { res.writeHead(400); res.end(); return; }
@@ -50,6 +66,24 @@ export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, 
     // The public proxy forwards its path prefix. Without the trailing slash, relative assets would break.
     if (base && pathname === base) { res.writeHead(301, { Location: `${base}/` }); res.end(); return; }
     if (base && pathname.startsWith(`${base}/`)) pathname = pathname.slice(base.length);
+
+    const control = pathname.match(/^\/api\/sitl\/([a-z]+)$/);
+    if (control && req.method === 'POST') {
+      const action = actions[control[1]];
+      if (!action) return sendJson(res, 404, { error: 'not found' });
+      if (!operatorToken) return sendJson(res, 503, { error: 'control disabled' });
+      if (!tokenMatches(operatorToken, req.headers['x-operator-token'])) {
+        await new Promise(resolve => setTimeout(resolve, failureDelayMs));
+        return sendJson(res, 401, { error: 'unauthorized' });
+      }
+      try {
+        const result = await action(await readJson(req));
+        return sendJson(res, result.status ?? 200, result);
+      } catch { return sendJson(res, 400, { error: 'bad request' }); }
+    }
+    if (req.method !== 'GET' && !head) { res.writeHead(405); res.end(); return; }
+    if (pathname === '/api/sitl/status') return sendJson(res, 200, await sitl.status(), head);
+    if (control) { res.writeHead(405); res.end(); return; }
 
     if (pathname === '/api/health') return sendJson(res, 200, { ok: true }, head);
     if (pathname === '/api/missions') {
