@@ -77,6 +77,7 @@ function render() {
   detail.refresh();
   valueResults.render();
   reinspection.render();
+  $('event-count').textContent = `총 ${state.events.length}건 · 최신순 · 예시 시나리오`;
   $('events').replaceChildren();
   if (!state.events.length) {
     const li = document.createElement('li');
@@ -84,7 +85,7 @@ function render() {
     li.textContent = '미션을 시작하면 구역별 진행 기록이 여기에 표시됩니다.';
     $('events').append(li);
   } else {
-    for (const event of state.events.slice(0, 4)) {
+    for (const event of state.events) {
       const li = document.createElement('li');
       li.innerHTML = `<time>${clock(event.elapsed)}</time><span class="event-cell">${event.cell_id}</span><span>${STATUS[event.status].label}${event.candidate_count ? ` · 후보 ${event.candidate_count}개` : ''}</span>`;
       $('events').append(li);
