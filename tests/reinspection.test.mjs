@@ -12,13 +12,13 @@ test('recommendations follow review results without relabeling detections', () =
   assert.equal(recommendation({...cell,status:'pending'},{pending:1}), '');
   assert.equal(recommendation({...cell,status:'retake'},{pending:0}), '사진 확보 필요');
 });
-test('completed scenario recommends 8 cells and filters pending/unknown targets in route order', () => {
+test('completed scenario recommends 8 cells and allows pending cells and filters unknown targets in route order', () => {
   let state=startMission(createMission());
   for(let i=0;i<48;i++) state=tickMission(state);
   const ids=new Set(state.cells.filter(c=>recommendation(c,reviewSummary(c,{}))).map(c=>c.cell_id));
   assert.equal(ids.size,8);
   assert.deepEqual(selectedTargets(state.cells,ids),['A-3','B-5','B-2','C-4','C-6','D-5','D-3','D-1']);
-  assert.deepEqual(selectedTargets(createMission().cells,new Set(['A-1','unknown'])),[]);
+  assert.deepEqual(selectedTargets(createMission().cells,new Set(['A-1','unknown'])),['A-1']);
 });
 
 import { mergeFlightProgress, missionFromFlight } from '../web/mission.mjs';
@@ -33,5 +33,6 @@ test('repeated partial reflights retain all previously inspected cells and revie
     assert.equal(state.cells.find(c=>c.cell_id==='B-2').confirmed_count,2);
   }
   const reset=mergeFlightProgress(createMission(),missionFromFlight(['A-1'],null,false,true,2));
-  assert.deepEqual(selectedTargets(reset.cells,new Set(['A-1','B-2'])),['A-1']);
+  assert.deepEqual(selectedTargets(reset.cells,new Set(['A-1','B-2'])),['A-1','B-2']);
+  assert.equal(reset.cells.find(c=>c.cell_id==='B-2').status,'pending');
 });
