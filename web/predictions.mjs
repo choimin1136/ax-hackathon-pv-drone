@@ -26,7 +26,12 @@ export function createPredictions(onChange) {
       const result = peek(cellId);
       if (result.state === 'loading') return null;
       // Regions below the image-level threshold are not candidates, so a cell without a hotspot has none.
-      if (result.state === 'ready') return result.data.is_hotspot ? ['check', result.data.regions.length] : ['no_candidate', 0];
+      if (result.state === 'ready') {
+        const { photo, is_hotspot, regions, probability, calibrated, image_size } = result.data;
+        // The cell keeps only small facts; the detail view loads the images from the server by photo name.
+        const model = { photo, probability, calibrated, image_size, regions: is_hotspot ? regions : [] };
+        return is_hotspot ? ['check', regions.length, model] : ['no_candidate', 0, model];
+      }
       return exampleResult(cellId);
     }
   };

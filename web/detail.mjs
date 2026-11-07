@@ -37,18 +37,24 @@ export function createDetail({getCell, onChange, titleId="review-title", archive
     if (!cell) return;
     renderedStatus = `${cell.cell_id}:${cell.status}:${cell.candidate_count}`;
     dialog.querySelector('h2').textContent = `${active} 구역 상세`;
+    // A model-judged cell shows the hotspot model's photo and regions instead of the synthetic example.
+    const model = cell.model;
+    dialog.querySelector('header .eyebrow').textContent = model ? '핫스팟 모델 결과' : '시뮬레이션 · 합성 예시';
+    dialog.querySelector('header+.review-disclaimer').textContent = model ? `드론이 도착한 구역의 열화상을 핫스팟 모델로 판정했습니다. 이미지 점수 ${model.probability?.toFixed(2) ?? '—'}${model.calibrated ? '' : '(보정 전)'}이며, 상자별 확률은 아닙니다. 온도와 원인은 측정하지 않습니다.` : '합성 사진과 별도의 합성 마스크를 겹쳐 보여줍니다. 실제 촬영 사진·AI 예측 결과·정답 라벨이 아닙니다.';
+    dialog.querySelector('.review-toolbar span').textContent = model ? `${(model.image_size ?? [640, 512]).join(' × ')} · ${model.photo.split('/').pop()}` : '640 × 512 · 예시';
+    dialog.querySelector('[data-analysis]').hidden = Boolean(model);
     analysis.setCell(cell);
     const counts = reviewSummary(cell,reviews);
     dialog.querySelector('[data-review-status]').textContent = '현재 셀 상태: '+cellReviewStatus(cell,counts).label;
     dialog.querySelector('[data-summary]').textContent = `승인 ${counts.approved} · 제외 ${counts.excluded} · 미확인 ${counts.pending}`;
-    dialog.querySelector('[data-empty]').textContent = cell.status === 'pending' ? '점검이 완료되면 예시 이미지와 후보를 볼 수 있습니다.' : cell.status === 'retake' ? '사진 전송 실패 예시입니다. 재촬영이 필요합니다.' : !cell.candidate_count ? '탐지된 후보가 없습니다. 안전을 보증하는 결과는 아닙니다.' : '후보 번호를 누르면 해당 영역이 강조됩니다.';
+    dialog.querySelector('[data-empty]').textContent = cell.status === 'pending' ? '점검이 완료되면 예시 이미지와 후보를 볼 수 있습니다.' : cell.status === 'retake' ? '사진 전송 실패 예시입니다. 재촬영이 필요합니다.' : !cell.candidate_count ? (model ? '모델이 핫스팟을 찾지 못했습니다. 안전을 보증하는 결과는 아닙니다.' : '탐지된 후보가 없습니다. 안전을 보증하는 결과는 아닙니다.') : '후보 번호를 누르면 해당 영역이 강조됩니다.';
     const list = dialog.querySelector('[data-candidates]');
     list.replaceChildren();
     (analysis.result()?.candidates ?? []).forEach((candidate,index)=>{
       const item = document.createElement('article');
       item.className='review-candidate';
       const select = document.createElement('button');
-      select.textContent=`후보 ${index+1} · ${candidate.area_px} px² (예시)`;
+      select.textContent=model ? `후보 ${index+1} · ${candidate.area_px} px²${candidate.score!=null ? ` · 점수 ${candidate.score.toFixed(2)}` : ''}` : `후보 ${index+1} · ${candidate.area_px} px² (예시)`;
       select.setAttribute('aria-pressed',String(highlighted===candidate.id));
       select.onclick=()=>{highlighted=candidate.id;render();};
       item.append(select);

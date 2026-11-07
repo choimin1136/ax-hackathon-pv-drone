@@ -34,7 +34,7 @@ export function tickMission(state) {
   return { ...state, elapsed, index, activeId: null, phase: index === ROUTE.length ? 'complete' : 'running', cells: state.cells.map(cell => cell.cell_id === id ? { ...cell, status, candidate_count } : cell), events: [event, ...state.events] };
 }
 // Builds the same mission state from a real flight, so cells show their result once the drone has arrived.
-// resultOf gives a cell's [status, candidate_count] (for example from the hotspot model); null keeps the cell pending
+// resultOf gives a cell's [status, candidate_count, model?] (model: the hotspot model's photo and regions); null keeps the cell pending
 // while its result is on the way. Without it, the example results are used.
 export const exampleResult = cell_id => examples[cell_id] ?? ['no_candidate', 0];
 export function missionFromFlight(visited, activeId, finished, flying, elapsed = 0, resultOf = exampleResult) {
@@ -52,8 +52,8 @@ export function missionFromFlight(visited, activeId, finished, flying, elapsed =
     cells: CELL_IDS.map(cell_id => {
       const result = results.get(cell_id);
       if (!result) return { cell_id, status: 'pending', candidate_count: 0, confirmed_count: 0 };
-      const [status, candidate_count] = result;
-      return { cell_id, status, candidate_count, confirmed_count: 0 };
+      const [status, candidate_count, model] = result;
+      return { cell_id, status, candidate_count, confirmed_count: 0, ...(model ? { model } : {}) };
     }),
     events
   };
