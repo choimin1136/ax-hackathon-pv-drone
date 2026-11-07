@@ -1,3 +1,4 @@
+import { createFlightHistory } from './flight-history.mjs';
 import { renderReviewStates } from './cell-review-status.mjs';
 import { createReport } from './report.mjs';
 import { createValueResults } from './value.mjs';
@@ -14,6 +15,7 @@ const detail = createDetail({getCell:id=>state.cells.find(c=>c.cell_id===id),onC
   render();
 }});
 const reinspection = createReinspection({getCells:()=>state.cells,getSummary:cell=>detail.summary(cell),isMissionComplete:()=>state.phase==='complete',onFlightChange:()=>render()});
+const flightHistory = createFlightHistory({getCandidates:cell=>detail.candidates(cell)});
 const valueResults = createValueResults({getCells:()=>state.cells});
 createReport({getSnapshot:()=>({mission:state,candidates:state.cells.flatMap(c=>detail.candidates(c)),assumptions:valueResults.assumptions()})});
 const clock = seconds => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
@@ -77,20 +79,7 @@ function render() {
   detail.refresh();
   valueResults.render();
   reinspection.render();
-  $('event-count').textContent = `총 ${state.events.length}건 · 최신순 · 예시 시나리오`;
-  $('events').replaceChildren();
-  if (!state.events.length) {
-    const li = document.createElement('li');
-    li.className = 'empty-event';
-    li.textContent = '미션을 시작하면 구역별 진행 기록이 여기에 표시됩니다.';
-    $('events').append(li);
-  } else {
-    for (const event of state.events) {
-      const li = document.createElement('li');
-      li.innerHTML = `<time>${clock(event.elapsed)}</time><span class="event-cell">${event.cell_id}</span><span>${STATUS[event.status].label}${event.candidate_count ? ` · 후보 ${event.candidate_count}개` : ''}</span>`;
-      $('events').append(li);
-    }
-  }
+  flightHistory.observe(state,reinspection.flight());
   const flight = reinspection.flight();
   if (flight.phase !== 'idle') $('flight-position').textContent = flight.phase === 'complete' ? '선택 구역 재비행 완료 · 예시' : '재비행 · ' + (flight.phase === 'paused' ? '일시정지 · ' : '') + (flight.activeId ? flight.activeId + ' 예시 촬영' : '선택 구역으로 이동 중');
   renderRoute();

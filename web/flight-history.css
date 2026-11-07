@@ -1,0 +1,17 @@
+#activity.flight-history .event-columns{grid-template-columns:minmax(190px,240px) 88px minmax(0,1fr)}
+#activity.flight-history #events li:not(.empty-event){display:block;padding:0}
+.flight-history-row{display:grid;grid-template-columns:minmax(190px,240px) 88px minmax(0,1fr);gap:16px;width:100%;padding:15px 14px;border:0;background:transparent;text-align:left;color:inherit;font:inherit;border-radius:0}
+.flight-history-row:hover{background:#f5f7fb}.flight-history-row:focus-visible{outline:2px solid #6366f1;outline-offset:-2px}
+.flight-history-note{font-size:12px;color:#8490a5;margin:12px 0 0}
+.flight-history-map{overflow:auto;flex:1;min-height:0}
+.flight-history-map .map-surface{display:block!important}
+.flight-history-map .cell-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+.flight-history-map .cell{min-height:85px;aspect-ratio:1.65}
+.flight-history-map .grid-stage svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.flight-history-map polyline{fill:none;stroke:#9caaff;stroke-width:2;stroke-dasharray:5 7}
+#activity [hidden]{display:none!important}
+@media(max-width:650px){#activity.flight-history .event-columns,.flight-history-row{grid-template-columns:minmax(135px,1fr) 60px minmax(90px,1fr);gap:8px;font-size:12px}.flight-history-map .cell-grid{gap:5px}.flight-history-map .cell{min-height:60px}.flight-history-map .map-surface{padding:10px}}
+.flight-history-map .cell{width:100%;height:clamp(52px,8vh,80px);min-height:52px;aspect-ratio:auto}
+.flight-history-map .map-surface{padding:16px}
+.flight-history-map .card-heading{margin-bottom:14px}
+.flight-history-map [data-back]{border:1px solid #dce2ec;border-radius:8px;background:white;padding:8px 12px;color:#52617a;font:inherit;cursor:pointer}
