@@ -1,0 +1,167 @@
+/* Light dashboard theme. Presentation only; status and mission logic stay unchanged. */
+:root {
+  color-scheme: light;
+  color: #17243b;
+  background: #f5f7fb;
+  --line: #e3e9f2;
+  --muted: #66758c;
+  --accent: #2563eb;
+  --green: #16836b;
+  font-family: "Pretendard", "Segoe UI", "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+body {background:#f5f7fb;}
+.dashboard-view[hidden] {display:none!important;}
+.dashboard-view {min-height:calc(100vh - 230px);}
+.dashboard-view:focus {outline:none;}
+#main>.dashboard-view:not(#overview) {margin-top:32px;}
+html {scroll-behavior:smooth;}
+#overview,#reinspection,#value-results,#report,#activity {scroll-margin-top:96px;}
+.dashboard-nav {position:fixed;left:0;top:72px;bottom:0;width:208px;z-index:20;background:#fff;border-right:1px solid var(--line);padding:28px 16px;overflow-y:auto;}
+.dashboard-nav>summary {display:none;}
+.dashboard-nav nav a {display:flex;align-items:center;gap:12px;margin:6px 0;padding:14px 12px;border-radius:9px;color:#52647e;text-decoration:none;font-size:13px;font-weight:600;}
+.dashboard-nav nav a>span {font-size:10px;font-weight:500;color:#8996aa;font-variant-numeric:tabular-nums;}
+.dashboard-nav nav a:hover {background:#f5f7fb;color:#1d4ed8;}
+.dashboard-nav nav a[aria-current] {background:#edf3ff;color:#245bc2;box-shadow:inset 3px 0 #3b6ce3;}
+.dashboard-nav nav a[aria-current]>span {color:#3b6ce3;}
+.nav-caption {margin:5px 12px 22px;font-size:10px;letter-spacing:1.8px;color:#8a98ac;font-weight:650;}
+.nav-note {margin:30px 12px;color:#8996aa;font-size:11px;line-height:1.8;}
+body>main {margin-left:208px;max-width:none;padding-inline:28px;}
+@media(min-width:851px) and (max-width:1250px) {body .workspace {grid-template-columns:1fr;} .dashboard-nav {width:184px;}body>main {margin-left:184px;}}
+@media(max-width:850px) {
+  .dashboard-nav {position:sticky;top:72px;bottom:auto;width:auto;padding:0 18px;overflow:visible;border-right:0;border-bottom:1px solid var(--line);z-index:20;}
+  .dashboard-nav>summary {display:flex;justify-content:space-between;align-items:center;min-height:48px;font-size:13px;font-weight:650;color:#344a67;cursor:pointer;list-style:none;}
+  .dashboard-nav>summary::-webkit-details-marker {display:none;}
+  .dashboard-nav nav {padding:0 0 12px;}
+  .dashboard-nav .nav-caption,.dashboard-nav .nav-note {display:none;}
+  body>main {margin-left:0;padding-inline:20px;}
+  #overview,#reinspection,#value-results,#report,#activity {scroll-margin-top:140px;}
+}
+@media(max-width:520px) {.dashboard-nav {top:64px;}body>main {padding-inline:14px;}}
+@media(prefers-reduced-motion:reduce) {html {scroll-behavior:auto;}}
+.topbar {height:72px;background:#fff;color:#17243b;border-bottom:1px solid var(--line);box-shadow:0 2px 12px #17243b04;}
+.brand {font-size:20px;letter-spacing:.5px;gap:3px;}
+.brand-light {font-weight:450;color:#4c607c;}
+.brand-mark {background:#2563eb;color:white;border-radius:11px;box-shadow:0 3px 8px #2563eb20;}
+.top-context,.divider {color:#697b95;}
+.simulation-badge {background:#eff6ff;border-color:#dbeafe;color:#245bc2;font-weight:600;}
+.simulation-badge i,.live-dot {background:#3b82f6;}
+main {max-width:1600px;padding-inline:4%;}
+.page-heading {margin:40px 0 30px;}
+.page-heading .eyebrow,.eyebrow {color:#64748b;letter-spacing:1.6px;}
+h1 {font-size:32px;font-weight:750;letter-spacing:-1.3px;}
+h2 {font-size:18px;letter-spacing:-.5px;}
+.heading-dot {color:#2563eb;}
+.intro {font-size:14px;line-height:1.7;}
+.demo-chip,.map-tag,.phase-pill {background:#f1f5f9;color:#526580;border:1px solid #e2e8f0;border-radius:7px;}
+.metric,.map-card,.mission-card,.detail-card,.activity-card,.reinspection-card {
+  background:#fff;border:1px solid var(--line);border-radius:16px;
+  box-shadow:0 3px 14px #20365a04;
+}
+.metrics {gap:18px;margin-bottom:26px;}
+.metric {padding:23px 24px;border-top:3px solid #dbeafe;}
+.metric:nth-child(2) {border-top-color:#b9e8d9;}
+.metric:nth-child(3) {border-top-color:#fde0a8;}
+.metric:nth-child(4) {border-top-color:#ddd1fa;}
+.metric>span:first-child {font-size:13px;color:#52647e;font-weight:550;}
+.metric strong {font-size:36px;font-weight:700;color:#17243b;}
+.metric-total,.metric small {color:#718198;}
+.metric-note {font-size:11px;color:#687991;line-height:1.6;}
+.mini-track {background:#eef2f7;}
+.mini-track>div {background:#3b82f6;}
+.workspace {grid-template-columns:minmax(0,1fr) 330px;gap:24px;}
+.card-heading {padding:24px 26px;}
+.map-surface {background-color:#f6f8fc;background-image:radial-gradient(#ccd7e5 .8px,transparent .8px);background-size:20px 20px;color:#334765;border:1px solid #e4eaf3;border-radius:12px;margin-inline:18px;padding:22px;}
+.map-caption,.north,.map-columns,.map-rows,.map-bottom {color:#61748e;}
+.map-caption {font-size:12px;}
+.map-bottom {border-color:#dce4ef;font-size:11px;line-height:1.6;}
+.cell {--status-ink:#64748b;--status-tint:#f1f5f9;background:#fff;color:#24344b;border:1px solid #e0e6ee;border-radius:10px;box-shadow:0 2px 5px #17243b06;gap:10px;}
+.panel-lines {inset:12px auto 12px 0;width:3px;border:0;border-radius:0 3px 3px 0;background:var(--status-ink);}
+.cell:hover {filter:none;box-shadow:0 3px 10px #2563eb20;border-color:#6b9cf8;}
+.cell.no_candidate {--status-ink:#087d57;--status-tint:#addfc8;background:#f3faf6;border-color:#c2ddce;color:#24344b;}
+.cell.caution {--status-ink:#ad6800;--status-tint:#ffd477;background:#fff7e5;border-color:#e8cf99;color:#24344b;}
+.cell.check {--status-ink:#c63038;--status-tint:#f9b3bc;background:#fff0f1;border-color:#e8b9bf;color:#24344b;}
+.cell.retake {--status-ink:#713bc2;--status-tint:#d1b6fa;background:#f5efff;border-color:#d2bfec;color:#24344b;}
+.cell-symbol {display:flex;align-items:center;justify-content:center;width:27px;height:27px;border-radius:8px;background:var(--status-tint);color:var(--status-ink);font-family:"Segoe UI",sans-serif;font-weight:650;font-size:17px;line-height:1;}
+.cell.excluded {background:#f8fafc;border-color:#e0e6ee;color:#64748b;}
+.cell[aria-pressed="true"] {outline:2px solid #4f75e8;outline-offset:2px;box-shadow:0 3px 10px #2563eb12;}
+.cell.active {box-shadow:0 0 0 2px #2563eb,0 0 18px #2563eb20;color:#1d4ed8;}
+.drone-marker {background:#2563eb;color:#fff;}
+#route-line {stroke:#3b82f6;opacity:.65;}
+.route-toggle input,.reinspection-grid input {accent-color:#2563eb;}
+.gray {background:#94a3b8;}.green {background:#32966c;}.amber {background:#c58a09;}.red {background:#d94742;}.violet {background:#8854d0;}
+.legend span,.map-help {color:#64748b;font-size:11px;}
+.map-help span {color:#2563eb;}
+#human-review-summary {margin:0 24px 22px;padding:13px 15px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;color:#52647b!important;}
+.mission-card,.detail-card {padding:24px;}
+.mission-copy,.progress-caption,.play-options,.text-button,.simulation-note,.detail-foot {color:#64748b;}
+.mission-copy {font-size:13px;}
+.progress-caption strong {color:#2563eb;}
+progress,progress::-webkit-progress-bar {background:#eaf0f7;}
+progress::-webkit-progress-value {background:#3b82f6;}
+progress::-moz-progress-bar {background:#3b82f6;}
+.mission-facts span {font-size:11px;color:#64748b;}
+.mission-facts strong {font-size:14px;}
+.primary,.detail-dialog button.primary {background:#2563eb;border-color:#2563eb;color:white;border-radius:9px;box-shadow:0 3px 6px #2563eb16;font-weight:650;}
+.primary:hover {background:#1d4ed8;border-color:#1d4ed8;}
+.simulation-note,.detail-foot {font-size:11px;}
+.status-badge {font-size:11px;border-radius:6px;background:#f1f5f9;color:#546782;}
+.status-badge.excluded {background:#edf1f6;color:#52647b;}
+.detail-top {flex-wrap:wrap;}
+.detail-card h2 {font-size:28px;}
+.detail-card h2 span {color:#64748b;}
+dt {color:#64748b;}dd {color:#263c59;}
+.detail-card dl {font-size:12px;}
+.next-action {background:#f5f8ff;border:1px solid #e5edfb;border-radius:9px;padding:14px;}
+.next-action span {color:#2563eb;font-size:10px;}
+.next-action p {color:#50627c;font-size:12px;}
+select,input[type="number"] {background:#fff;color:#253b58;border:1px solid #cbd5e1;border-radius:7px;padding:7px;}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible {outline:3px solid #60a5fa;outline-offset:3px;}
+button:disabled {opacity:.5;}
+.activity-heading span,.activity-card li,.activity-card time,.activity-card li.empty-event,footer {color:#64748b;}
+.activity-card li {border-color:var(--line);font-size:12px;}
+.activity-card time {font-size:11px;}
+footer {font-size:11px;}
+.reinspection-card {padding:28px;margin-top:26px;}
+.reinspection-card>.card-heading {padding:0 0 12px;}
+.reinspection-help,.reinspection-card>p {color:#62738b;}
+.reinspection-actions button,.value-results button,#report button,.report-actions button,.detail-dialog button {
+  background:#fff;border:1px solid #cbd5e1;color:#344a67;border-radius:8px;font-weight:550;
+}
+.reinspection-actions button:hover:not(:disabled),.value-results button:hover,#report button:hover,.report-actions button:hover,.detail-dialog button:hover:not(:disabled) {background:#eff6ff;border-color:#93b8fa;}
+#report button {background:#2563eb;color:white;border-color:#2563eb;padding:13px 18px;}
+#report button:hover {background:#1d4ed8;color:#fff;}
+.reinspection-grid label {background:#fff;border-color:#e2e8f0;border-radius:9px;color:#52647e;padding:14px;}
+.reinspection-grid label.is-selected {background:#eff6ff;border-color:#8eb3f5;color:#1e4f9c;}
+.reflight-panel {background:#f8fafc;border-color:#e2e8f0;}
+.reflight-panel li[aria-current] {background:#dbeafe;color:#1d4ed8;}
+.value-results fieldset {background:#f8fafc;border-color:var(--line);border-radius:12px;}
+.value-results legend {font-size:13px;font-weight:600;color:#425776;}
+.value-fields label {color:#52647e;}
+.value-fields input {border-color:#cbd5e1;color:#17243b;border-radius:8px;padding:12px;}
+.value-scenarios article {background:#f8fafc;border:1px solid var(--line);border-radius:12px;}
+.value-scenarios article:nth-child(2) {background:#eff6ff;border-color:#afcaff;}
+.value-scenarios h3 {color:#2d4b73;}
+.value-scenarios dt {color:#64748b;}.value-scenarios dd {color:#172f53;}
+.value-scenarios dl>div {display:block;border-top:1px solid #e2e8f0;padding-top:14px;}
+.value-scenarios dd {margin-top:8px;font-variant-numeric:tabular-nums;}
+:root .detail-dialog,:root .report-dialog {background:#fff;border-color:#dbe3ef;border-radius:18px;color:#17243b;padding:28px;box-shadow:0 24px 80px #142b5040;}
+.detail-dialog::backdrop,.report-dialog::backdrop {background:#0f233a88;backdrop-filter:blur(3px);}
+.review-disclaimer,.review-toolbar {color:#64748b;}
+.review-candidate {background:#f8fafc;border-color:#e2e8f0;border-radius:10px;}
+.detail-dialog button[aria-pressed="true"] {background:#dbeafe;border-color:#93b8fa;color:#1e4f9c;}
+:root [data-analysis] fieldset {background:#f5f8ff;border-color:#d8e5fa;border-radius:10px;}
+:root .detail-dialog [aria-busy="true"] [data-media-status] {background:#eff6ff;color:#245bc2;}
+.report-document th {background:#f1f5f9;}.report-document th,.report-document td {border-color:#dce4ef;}
+@media(max-width:1100px) {.workspace {grid-template-columns:minmax(0,1fr) 290px;gap:18px;}.mission-card,.detail-card {padding:20px;}}
+@media(max-width:850px) {.workspace {grid-template-columns:1fr;}.page-heading {margin-top:28px;}.metric {padding:18px 16px;}}
+@media(max-width:520px) {
+  .topbar {height:64px;padding-inline:16px;gap:12px;}.brand {font-size:16px;}.brand-mark {width:29px;height:29px;}
+  main {padding-inline:14px;}h1 {font-size:26px;}.intro {font-size:12px;}.page-heading {margin-bottom:24px;}
+  .metrics {gap:10px;}.metric {padding:16px 13px;}.metric strong {font-size:30px;}.metric>span:first-child {font-size:11px;}.metric-note {font-size:10px;}
+  .card-heading {padding:20px 16px;}.map-surface {margin-inline:8px;padding:16px 8px;}.map-caption {font-size:10px;}.map-bottom {font-size:10px;}
+  .cell {border-radius:6px;}.legend span,.map-help {font-size:10px;}#human-review-summary {margin:0 16px 18px;font-size:11px!important;}
+  .reinspection-card {padding:20px 16px;}.reinspection-grid label {padding:10px;font-size:11px;}
+  :root .detail-dialog,:root .report-dialog {padding:16px;border-radius:13px;}.detail-dialog header {align-items:flex-start;}
+  .review-toolbar {flex-wrap:wrap;}.value-fields {gap:12px;}.value-fields label {font-size:11px;}
+}
