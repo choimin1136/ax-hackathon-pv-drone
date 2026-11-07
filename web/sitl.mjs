@@ -1,4 +1,4 @@
-import { buildLog, logUntil, routeFlight, targetTime } from './flight.mjs';
+import { buildLog, logUntil, plantCells, routeFlight, targetTime } from './flight.mjs';
 import { createScene, createViewToggle, followRoute } from './flight-scene.mjs';
 import { missionFromFlight } from './mission.mjs';
 import { attitudeAt, createHud } from './hud.mjs';
@@ -116,8 +116,10 @@ function syncReflight(state, t) {
   reflightKey = key;
   document.dispatchEvent(new CustomEvent('reflight:set', { detail: { targets: reflightLive, phase: finished ? 'complete' : 'running', index: finished ? reflightLive.length : done, activeId: finished ? null : state.current, elapsed: Math.floor(t * flightSpeed()) } }));
 }
+// A record of fewer cells is a reinspection reflight; it never replaces the full inspection's progress.
+const isReflightRecord = next => next.cells?.length > 0 && next.cells.length < plantCells().length;
 function syncLiveMission(state, t) {
-  if (mode !== 'live' || reflight || reflightLive) return;
+  if (mode !== 'live' || reflight || reflightLive || isReflightRecord(flight)) return;
   const finished = flight.complete && t >= flight.duration_s;
   const key = `${state.visited.length}:${state.current}:${finished}:${status?.flying}`;
   if (key === liveKey) return;
