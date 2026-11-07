@@ -45,3 +45,15 @@ export function renderReviewStates({cells,getCounts,selected}) {
     }
   });
 }
+
+// Reflight cards count only completed visits; the original inspection remains intact.
+export function summarizeFlightReview(cells, getCounts, flight) {
+  const reflight=Boolean(flight && flight.phase !== 'idle');
+  const visited=new Set(reflight ? flight.targets.slice(0,flight.index) : []);
+  const scoped=reflight ? cells.filter(cell=>visited.has(cell.cell_id)) : cells;
+  const reviewed=summarizeReview(scoped,getCounts);
+  return {reflight,completed:scoped.length,total:reflight?flight.targets.length:cells.length,
+    clear:scoped.filter(cell=>cell.status==='no_candidate').length,
+    review:reviewed.unresolved+reviewed.approved,
+    retake:scoped.filter(cell=>cell.status==='retake').length};
+}

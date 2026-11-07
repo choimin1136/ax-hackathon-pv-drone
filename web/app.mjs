@@ -1,5 +1,5 @@
 import { createFlightHistory } from './flight-history.mjs';
-import { renderReviewStates } from './cell-review-status.mjs';
+import { renderReviewStates, summarizeFlightReview } from './cell-review-status.mjs';
 import { createReport } from './report.mjs';
 import { createValueResults } from './value.mjs';
 import { CELL_IDS, ROUTE, STATUS, createMission, startMission, pauseMission, tickMission, summarize, mergeFlightProgress } from './mission.mjs';
@@ -84,6 +84,13 @@ function render() {
   if (flight.phase !== 'idle') $('flight-position').textContent = flight.phase === 'complete' ? '선택 구역 재비행 완료 · 예시' : '재비행 · ' + (flight.phase === 'paused' ? '일시정지 · ' : '') + (flight.activeId ? flight.activeId + ' 예시 촬영' : '선택 구역으로 이동 중');
   renderRoute();
   renderReviewStates({cells:state.cells,getCounts:cell=>detail.summary(cell),selected});
+  const displayed=summarizeFlightReview(state.cells,cell=>detail.summary(cell),flight);
+  $('clear-count').textContent=displayed.clear;
+  $('review-count').textContent=displayed.review;
+  $('retake-count').textContent=displayed.retake;
+  const scope=displayed.reflight ? '재점검 방문 완료 '+displayed.completed+'/'+displayed.total+'구역 · 이전 판정 참고, 새 분석 아님' : '';
+  $('clear-count').closest('.metric').querySelector('.metric-note').textContent=scope || '탐지 결과가 안전을 보증하지 않습니다';
+  $('review-count').closest('.metric').querySelector('.metric-note').textContent=scope || '미확인 또는 승인 후보가 있는 구역';
   document.dispatchEvent(new CustomEvent('mission:change', {detail: {...state, reflight: reinspection.flight()}}));
 }
 function schedule() {
