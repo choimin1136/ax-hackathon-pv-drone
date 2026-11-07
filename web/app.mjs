@@ -10,7 +10,7 @@ const detail = createDetail({getCell:id=>state.cells.find(c=>c.cell_id===id),onC
   reinspection.invalidate();
   render();
 }});
-const reinspection = createReinspection({getCells:()=>state.cells,getSummary:cell=>detail.summary(cell)});
+const reinspection = createReinspection({getCells:()=>state.cells,getSummary:cell=>detail.summary(cell),isMissionComplete:()=>state.phase==='complete',onFlightChange:()=>render()});
 const detailButton=document.createElement('button');
 detailButton.type='button';detailButton.className='primary';detailButton.textContent='이미지 · 후보 확인';
 detailButton.onclick=()=>detail.open(selected);
@@ -29,7 +29,8 @@ for (const id of CELL_IDS) {
 function renderRoute() {
   $('route').style.display = !$('show-route').checked || state.phase === 'idle' ? 'none' : 'block';
   const base = $('cell-grid').getBoundingClientRect();
-  const points = ROUTE.map(id => {
+  const flight = reinspection.flight();
+  const points = (flight.phase === 'idle' ? ROUTE : flight.targets).map(id => {
     const rect = cells.get(id).getBoundingClientRect();
     return `${rect.left - base.left + rect.width / 2},${rect.top - base.top + rect.height / 2}`;
   });
@@ -58,10 +59,10 @@ function render() {
   $('flight-position').textContent = state.phase === 'idle' ? '미션을 시작하면 가상 경로가 표시됩니다' : state.phase === 'complete' ? '예시 미션 완료 · 전체 구역 방문' : state.activeId ? `${state.activeId} 구역 · ${state.phase === 'paused' ? '일시정지' : '분석 중 (예시)'}` : `다음 구역으로 이동 ${state.phase === 'paused' ? '대기' : '중'} · 예시`;
   for (const cell of state.cells) {
     const button = cells.get(cell.cell_id);
-    const active = state.activeId === cell.cell_id;
+    const active = (reinspection.flight().activeId || state.activeId) === cell.cell_id;
     button.className = `cell ${cell.status}${active ? ' active' : ''}`;
     button.setAttribute('aria-pressed', String(selected === cell.cell_id));
-    button.setAttribute('aria-label', `${cell.cell_id} 구역, ${active ? '분석 중 예시' : STATUS[cell.status].label}`);
+    button.setAttribute('aria-label', `${cell.cell_id} 구역, ${active ? (reinspection.flight().activeId ? '재비행 예시 촬영 중' : '분석 중 예시') : STATUS[cell.status].label}`);
     button.querySelector('.cell-symbol').textContent = STATUS[cell.status].symbol;
     button.querySelector('.drone-marker').hidden = !active;
   }
@@ -89,6 +90,8 @@ function render() {
       $('events').append(li);
     }
   }
+  const flight = reinspection.flight();
+  if (flight.phase !== 'idle') $('flight-position').textContent = flight.phase === 'complete' ? '선택 구역 재비행 완료 · 예시' : '재비행 · ' + (flight.phase === 'paused' ? '일시정지 · ' : '') + (flight.activeId ? flight.activeId + ' 예시 촬영' : '선택 구역으로 이동 중');
   renderRoute();
 }
 function schedule() {
