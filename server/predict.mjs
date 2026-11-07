@@ -5,19 +5,27 @@ const DEFAULT_MODEL_URL = 'https://aiopen-serving.jntp-ax.or.kr/jntp-gpu/SV-fc7f
 const CELL = /^[A-D]-[1-6]$/;
 const PHOTO = /\.(jpe?g|png)$/i;
 const TIMEOUT_MS = 30000;
+const LIST_MS = 60000;
 
 // Sends one thermal photo per cell to the hotspot model. The browser cannot call the model's domain itself (no CORS),
-// so the web server does it. Photos come from PHOTO_DIR: an "A-1.jpg" style name wins, otherwise each full flight
+// so the web server does it. Photos come from PHOTO_DIR and its subfolders (AI Hub keeps images in TS_* folders and
+// label JSON in TL_*, which the extension filter skips). An "A-1.jpg" style name wins, otherwise each full flight
 // draws a random photo per cell (without repeats while the folder has enough).
 export function createPredictor({ env = process.env, fetchImpl = fetch, random = Math.random } = {}) {
   const photoDir = env.PHOTO_DIR ? path.resolve(env.PHOTO_DIR) : null;
   const modelUrl = env.MODEL_URL ?? DEFAULT_MODEL_URL;
   const cache = new Map();
-  let assigned = new Map();
+  let assigned = new Map(), listed = null, listedAt = 0;
 
+  // Large datasets are listed at most once a minute; names are paths relative to PHOTO_DIR.
   async function photos() {
     if (!photoDir) return [];
-    return (await readdir(photoDir).catch(() => [])).filter(name => PHOTO.test(name)).sort();
+    if (!listed || Date.now() - listedAt > LIST_MS) {
+      const entries = await readdir(photoDir, { recursive: true }).catch(() => []);
+      listed = entries.filter(name => PHOTO.test(name)).sort();
+      listedAt = Date.now();
+    }
+    return listed;
   }
   async function photoFor(cellId) {
     const names = await photos();
@@ -38,7 +46,7 @@ export function createPredictor({ env = process.env, fetchImpl = fetch, random =
   async function call(name) {
     const file = path.join(photoDir, name);
     const form = new FormData();
-    form.append('file', new Blob([await readFile(file)], { type: name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg' }), name);
+    form.append('file', new Blob([await readFile(file)], { type: name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg' }), path.basename(name));
     const response = await fetchImpl(modelUrl, { method: 'POST', body: form, signal: AbortSignal.timeout(TIMEOUT_MS) });
     if (!response.ok) throw new Error(`model status ${response.status}`);
     return response.json();

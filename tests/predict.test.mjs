@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createPredictor } from '../server/predict.mjs';
@@ -14,7 +14,7 @@ const answer = hot => ({ probability: hot ? 0.76 : 0.003, is_hotspot: hot, decis
 
 async function withPhotos(names, run) {
   const dir = await mkdtemp(path.join(tmpdir(), 'photos-'));
-  for (const name of names) await writeFile(path.join(dir, name), name);
+  for (const name of names) { await mkdir(path.dirname(path.join(dir, name)), { recursive: true }); await writeFile(path.join(dir, name), name); }
   try { await run(dir); } finally { await rm(dir, { recursive: true, force: true }); }
 }
 
@@ -68,3 +68,13 @@ test('cells wait for their model result and then show it', () => {
   assert.deepEqual(mission.cells.slice(0, 3).map(c => [c.cell_id, c.status, c.candidate_count]), [['A-1', 'check', 2], ['A-2', 'pending', 0], ['A-3', 'pending', 0]]);
   assert.deepEqual(mission.events.map(e => e.cell_id), ['A-1']);
 });
+
+test('finds photos in AI Hub style subfolders and skips label files', () => withPhotos(['TS_Positive/p1.jpg', 'TS_Normal/n1.jpg', 'TL_Positive/p1.json'], async dir => {
+  const sent = [];
+  const fetchImpl = async (url, { body }) => { sent.push(body.get('file').name); return new Response(JSON.stringify(answer(true))); };
+  const predictor = createPredictor({ env: { PHOTO_DIR: dir }, fetchImpl, random: () => 0 });
+  assert.deepEqual(await predictor.status(), { configured: true, photos: 2 });
+  assert.equal((await predictor.predict('A-1')).photo, path.join('TS_Normal', 'n1.jpg'));
+  assert.equal((await predictor.predict('A-2')).photo, path.join('TS_Positive', 'p1.jpg'));
+  assert.deepEqual(sent, ['n1.jpg', 'p1.jpg']);
+}));
