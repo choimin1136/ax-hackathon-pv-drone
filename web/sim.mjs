@@ -5,14 +5,14 @@ const PHASES = { waiting: '이륙 대기', takeoff: '이륙', moving: '셀로 �
 const SOURCES = { fc: 'FC', mission: 'MISSION', frame: 'FRAME' };
 const POLL_MS = 2000;
 const COLORS = { outside: '#a9b6c8', target: '#3a68a8', visited: '#087d57' };
-const ERRORS = { 401: '운영자 비밀번호가 맞지 않습니다.', 503: '서버에 운영자 비밀번호가 설정되지 않았습니다.' };
+const CONFIRM_MS = 5000;
+const ERRORS = { 409: '지금은 실행할 수 없습니다. SITL이 켜져 있는지, 다른 비행이 진행 중인지 확인하세요.' };
 
 const root = document.getElementById('sim');
 root.innerHTML = `
   <div class="card-heading"><div><p class="eyebrow">ARDUPILOT SITL · LIVE</p><h2>드론 시뮬레이션</h2></div><span id="sim-source" class="sim-pill">확인 중</span></div>
   <p class="sitl-copy">서버의 ArduPilot SITL을 <strong id="sim-speed">5</strong>배속으로 실행합니다. 실제 드론 비행이 아니며, 사진 전송과 AI 분석은 연결되어 있지 않습니다. 셀 색은 도착 여부만 나타냅니다.</p>
   <div class="sim-controls">
-    <label class="sim-token">운영자 비밀번호<input id="sim-token" type="password" autocomplete="off" spellcheck="false"></label>
     <button id="sim-power" type="button" disabled>SITL 켜기</button>
     <label>비행 범위<select id="sim-cells"><option value="">전체 24셀</option><option value="C-4,C-5,C-6">재점검 3셀 (C-4, C-5, C-6)</option></select></label>
     <button id="sim-fly" class="primary" type="button" disabled>▶ 비행 시작</button>
@@ -38,6 +38,7 @@ root.innerHTML = `
 const $ = id => document.getElementById(id);
 const clock = seconds => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 let flight = null, entries = [], shown = -1, status = null, busy = false, wasFlying = false;
+let confirmOffUntil = 0, confirmTimer = 0;
 
 function renderLog(t) {
   const visible = logUntil(entries, t);
@@ -81,9 +82,11 @@ function renderControls() {
   const power = $('sim-power'), fly = $('sim-fly'), pill = $('sim-source');
   if (!status) { power.disabled = fly.disabled = true; pill.textContent = '서버 확인 불가'; pill.dataset.state = 'off'; return; }
   $('sim-speed').textContent = status.speedup;
-  power.textContent = status.sitl ? 'SITL 끄기' : 'SITL 켜기';
+  const confirming = status.sitl && Date.now() < confirmOffUntil;
+  power.textContent = confirming ? '⚠ 한 번 더 누르면 꺼짐' : status.sitl ? 'SITL 끄기' : 'SITL 켜기';
+  power.classList.toggle('sim-warning', confirming);
   power.disabled = busy;
-  fly.disabled = busy || !status.sitl || status.flying;
+  fly.disabled = busy || !status.sitl;
   fly.textContent = status.flying ? '비행 중' : '▶ 비행 시작';
   $('sim-cells').disabled = status.flying;
   pill.textContent = status.flying ? `● SITL 비행 중 · ${status.speedup}배속` : status.sitl ? `SITL 켜짐 · ${status.speedup}배속` : 'SITL 꺼짐';
@@ -122,7 +125,7 @@ async function act(pathName, body, doneMessage) {
   try {
     const response = await fetch(`./api/sitl/${pathName}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Operator-Token': $('sim-token').value },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body ?? {})
     });
     if (!response.ok) { setMessage(ERRORS[response.status] ?? '요청을 처리하지 못했습니다. SITL 상태를 확인하세요.', true); return; }
@@ -134,10 +137,24 @@ async function act(pathName, body, doneMessage) {
   finally { busy = false; renderControls(); }
 }
 
-$('sim-power').addEventListener('click', () => (status?.sitl
-  ? act('stop', null, 'SITL을 껐습니다.')
-  : act('start', null, 'SITL을 켰습니다. 위치를 잡을 때까지 잠시 기다린 뒤 비행을 시작하세요.')));
-$('sim-fly').addEventListener('click', () => act('fly', { cells: $('sim-cells').value || null }, '비행을 시작했습니다. 이륙까지 잠시 걸릴 수 있습니다.'));
+// Anyone can use these buttons, so turning SITL off takes a second click within a few seconds.
+function resetConfirm() {
+  confirmOffUntil = 0;
+  clearTimeout(confirmTimer);
+}
+$('sim-power').addEventListener('click', () => {
+  if (!status?.sitl) { resetConfirm(); act('start', null, 'SITL을 켰습니다. 위치를 잡을 때까지 10초쯤 기다린 뒤 비행을 시작하세요.'); return; }
+  if (Date.now() < confirmOffUntil) { resetConfirm(); act('stop', null, 'SITL을 껐습니다.'); return; }
+  confirmOffUntil = Date.now() + CONFIRM_MS;
+  setMessage(status.flying ? '⚠ 지금 비행 중입니다. 끄면 비행이 중단되고 다른 사람의 화면도 멈춥니다. 5초 안에 다시 누르면 꺼집니다.' : '⚠ 다른 사람이 사용 중일 수 있습니다. 5초 안에 다시 누르면 SITL이 꺼집니다.', true);
+  renderControls();
+  clearTimeout(confirmTimer);
+  confirmTimer = setTimeout(() => { confirmOffUntil = 0; setMessage(''); renderControls(); }, CONFIRM_MS);
+});
+$('sim-fly').addEventListener('click', () => {
+  if (status?.flying) { setMessage('⚠ 이미 비행 중입니다. 끝날 때까지 기다려 주세요. 새 비행은 시작하지 않았습니다.', true); return; }
+  act('fly', { cells: $('sim-cells').value || null }, '비행을 시작했습니다. 이륙까지 잠시 걸릴 수 있습니다.');
+});
 
 const { missions } = await fetch('./api/missions').then(response => response.json()).catch(() => ({ missions: [] }));
 if (missions.includes('live')) await loadFlight(false).catch(() => {});

@@ -44,6 +44,7 @@
 .sim-controls input,.sim-controls select {height:40px;padding:0 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:#17243b;background:#fff;}
 .sim-controls button {height:40px;padding:0 16px;border:1px solid #cfdaea;border-radius:8px;font-size:13px;font-weight:600;color:#245bc2;background:#fff;}
 .sim-controls .primary {width:auto;min-width:130px;margin:0;color:#fff;background:#2563eb;border-color:#2563eb;}
+.sim-controls button.sim-warning {color:#fff;background:#c63038;border-color:#c63038;}
 .sim-message {min-height:20px;margin:0 0 12px;font-size:12px;color:var(--muted);}
 .sim-message.error {color:#c63038;}
 .sim-card .sitl-copy strong {color:#17243b;}

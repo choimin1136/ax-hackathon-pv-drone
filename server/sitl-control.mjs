@@ -1,5 +1,4 @@
 import { execFile, spawn } from 'node:child_process';
-import { createHash, timingSafeEqual } from 'node:crypto';
 import { mkdir, unlink } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -7,12 +6,6 @@ import path from 'node:path';
 const ROOT = '/data/hackathon';
 const CELLS = /^[A-D]-[1-6](,[A-D]-[1-6]){0,23}$/;
 export const LIVE_ID = 'live';
-
-const digest = value => createHash('sha256').update(String(value)).digest();
-
-export function tokenMatches(expected, given) {
-  return Boolean(expected) && timingSafeEqual(digest(expected), digest(given ?? ''));
-}
 
 function pgrep() {
   return new Promise(resolve => execFile('pgrep', ['-x', 'arducopter'], error => resolve(!error)));

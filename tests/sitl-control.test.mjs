@@ -4,11 +4,8 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createApp } from '../server/index.mjs';
-import { tokenMatches } from '../server/sitl-control.mjs';
 
-const TOKEN = 'test-operator-value';
-
-async function withApp(run, { operatorToken = TOKEN, code = 0 } = {}) {
+async function withApp(run, { code = 0 } = {}) {
   const dir = await mkdtemp(path.join(tmpdir(), 'sitl-'));
   const stub = path.join(dir, 'stub.mjs');
   await writeFile(stub, `import { writeFileSync } from 'node:fs';
@@ -20,36 +17,24 @@ if (args.includes('--out-dir')) {
   const env = { SITL_BIN: process.execPath, SITL_DIR: dir, SITL_DEFAULTS: stub, PYTHON_BIN: process.execPath, MISSION_SCRIPT: stub, SITL_SPEEDUP: '5' };
   // The stub SITL ignores its arguments except that node needs a script, so point it at a sleeping file.
   await writeFile(path.join(dir, 'sleep.mjs'), 'setTimeout(() => {}, 60000);');
-  const app = createApp({ flightDir: dir, operatorToken, sitlEnv: env, sitlHooks: { findSitl: async () => false, killSitl: async () => {} }, sitlArgsForTest: [path.join(dir, 'sleep.mjs')], failureDelayMs: 0 });
+  const app = createApp({ flightDir: dir, sitlEnv: env, sitlHooks: { findSitl: async () => false, killSitl: async () => {} }, sitlArgsForTest: [path.join(dir, 'sleep.mjs')] });
   await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${app.address().port}`;
-  const post = (name, body = {}, token = TOKEN) => fetch(`${base}/api/sitl/${name}`, { method: 'POST', headers: { 'X-Operator-Token': token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const post = (name, body = {}) => fetch(`${base}/api/sitl/${name}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   try { await run({ base, post, dir }); }
   finally { await post('stop').catch(() => {}); app.close(); await rm(dir, { recursive: true, force: true }); }
 }
 
-test('token comparison rejects empty and wrong values', () => {
-  assert.equal(tokenMatches(TOKEN, TOKEN), true);
-  assert.equal(tokenMatches(TOKEN, 'wrong'), false);
-  assert.equal(tokenMatches(TOKEN, undefined), false);
-  assert.equal(tokenMatches('', ''), false);
-});
-
-test('anyone can read status but control needs the operator password', () => withApp(async ({ base, post }) => {
+test('anyone can read status and control SITL, and bad requests are refused', () => withApp(async ({ base, post }) => {
   const status = await (await fetch(`${base}/api/sitl/status`)).json();
   assert.deepEqual(status, { speedup: 5, sitl: false, flying: false, mission: 'idle' });
-  assert.equal((await post('start', {}, 'wrong')).status, 401);
-  assert.equal((await fetch(`${base}/api/sitl/start`, { method: 'POST' })).status, 401);
   assert.equal((await post('unknown')).status, 404);
   assert.equal((await fetch(`${base}/api/sitl/start`)).status, 405);
-  assert.equal((await fetch(`${base}/api/sitl/status`)).status, 200);
-  assert.equal((await (await fetch(`${base}/api/sitl/status`)).json()).sitl, false);
+  assert.equal((await fetch(`${base}/api/sitl/start`, { method: 'POST', body: '{bad' })).status, 400);
+  assert.equal((await fetch(`${base}/api/sitl/fly`, { method: 'POST', body: JSON.stringify({ cells: 'x'.repeat(2000) }) }).catch(() => ({ status: 400 }))).status, 400);
+  assert.equal((await (await post('start')).json()).sitl, true);
+  assert.equal((await (await post('start')).json()).sitl, true);
 }));
-
-test('control is disabled when the server has no operator password', () => withApp(async ({ post }) => {
-  assert.equal((await post('start', {}, '')).status, 503);
-  assert.equal((await post('start')).status, 503);
-}, { operatorToken: '' }));
 
 test('starts SITL, flies chosen cells once and stops', () => withApp(async ({ base, post, dir }) => {
   assert.equal((await post('fly')).status, 409);

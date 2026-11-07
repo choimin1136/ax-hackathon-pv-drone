@@ -2,14 +2,13 @@ import http from 'node:http';
 import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { createSitlControl, tokenMatches } from './sitl-control.mjs';
+import { createSitlControl } from './sitl-control.mjs';
 
 const DEFAULT_WEB = fileURLToPath(new URL('../web/', import.meta.url));
 const DEFAULT_FLIGHTS = fileURLToPath(new URL('../drone/sample_flight/', import.meta.url));
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8' };
 const MISSION_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_BODY = 1024;
-const FAILURE_DELAY_MS = 1000;
 
 // A flight in progress can leave a half-written last line, so unreadable lines are skipped.
 export function parseFlight(text) {
@@ -53,7 +52,7 @@ function sendJson(res, status, body, head) {
   res.end(head ? undefined : JSON.stringify(body));
 }
 
-export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, basePath = '', operatorToken = process.env.OPERATOR_TOKEN ?? '', sitlEnv = process.env, sitlHooks = {}, sitlArgsForTest, failureDelayMs = FAILURE_DELAY_MS } = {}) {
+export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, basePath = '', sitlEnv = process.env, sitlHooks = {}, sitlArgsForTest } = {}) {
   const base = basePath.replace(/\/+$/, '');
   const sitl = createSitlControl({ flightDir, env: sitlEnv, sitlArgs: sitlArgsForTest, ...sitlHooks });
   const actions = { start: () => sitl.start(), stop: () => sitl.stop(), fly: body => sitl.fly(body.cells ?? null) };
@@ -71,11 +70,6 @@ export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, 
     if (control && req.method === 'POST') {
       const action = actions[control[1]];
       if (!action) return sendJson(res, 404, { error: 'not found' });
-      if (!operatorToken) return sendJson(res, 503, { error: 'control disabled' });
-      if (!tokenMatches(operatorToken, req.headers['x-operator-token'])) {
-        await new Promise(resolve => setTimeout(resolve, failureDelayMs));
-        return sendJson(res, 401, { error: 'unauthorized' });
-      }
       try {
         const result = await action(await readJson(req));
         return sendJson(res, result.status ?? 200, result);

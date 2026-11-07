@@ -99,6 +99,6 @@ cell-review-status.mjs가 상태 계산·화면 표시를 담당합니다. app.m
 - `점검 현황 (현재 상태)`: 저장된 SITL 기록을 재생합니다. 서버의 SITL이 꺼져 있어도 동작합니다.
 - `점검 현황 (드론 시뮬)`: `sim.mjs`가 서버의 SITL을 켜고 끄며 비행을 시작하고, 2초마다 상태와 기록을 받아 표시합니다. 비행 기록은 `live.jsonl`이며 저장소에 올리지 않습니다.
 
-제어 API(`POST /api/sitl/start|stop|fly`)는 `X-Operator-Token`이 서버의 `OPERATOR_TOKEN`과 같을 때만 동작합니다. `OPERATOR_TOKEN`이 없으면 제어가 꺼집니다. 상태 조회(`GET /api/sitl/status`)는 공개입니다. 배속은 `SITL_SPEEDUP`(기본 5)으로 바꿉니다.
+제어 API(`POST /api/sitl/start|stop|fly`)와 상태 조회(`GET /api/sitl/status`)는 누구나 쓸 수 있습니다. 화면에서 SITL을 끌 때는 5초 안에 다시 눌러야 하고, 비행은 동시에 하나만 실행됩니다. 공개 주소의 누구나 SITL을 끌 수 있으므로 시연 중 끊길 수 있습니다. 배속은 `SITL_SPEEDUP`(기본 5)으로 바꿉니다.
 
 이륙장은 격자 왼쪽 밖 `(-30, 30)`이며 `drone/mission.py`와 `web/flight.mjs`의 `HOME` 값을 함께 바꿔야 합니다. `flight-scene.mjs`가 3D 그리기를 맡고, 재점검 화면의 `reflight-view.mjs`는 고른 구역으로 계산한 경로를 보여 줍니다. 이 재점검 3D는 SITL 기록이 아니므로 화면에 `경로 시뮬레이션`으로 표시합니다.
