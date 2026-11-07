@@ -12,3 +12,11 @@
 [data-analysis] label {display:block;font-size:12px;margin:8px 0;}
 [data-analysis] select {width:100%;max-width:100%;padding:8px;}
 [data-analysis][aria-busy="true"] {opacity:.8;}
+/* On wide screens the photo stays in place and only the candidate list on the right scrolls. */
+@media(min-width:701px) {
+  .detail-dialog[open] {display:flex;flex-direction:column;height:90vh;overflow:hidden;}
+  .detail-dialog[open]>* {flex:none;}
+  .detail-dialog[open]>.review-layout {flex:1 1 auto;min-height:0;}
+  .review-layout>section {min-height:0;overflow-y:auto;}
+  .review-layout>section:last-child {padding-right:6px;overscroll-behavior:contain;}
+}
