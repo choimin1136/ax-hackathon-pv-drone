@@ -476,3 +476,6 @@ body #main>footer {display:none;}
   #overview .overview-summary .metric-note {font-size:10px;line-height:1.4;}
   #overview #human-review-summary {font-size:10px!important;padding:6px 8px;}
 }
+/* Balance the disclaimer between its divider and the card's bottom edge. */
+#overview .mission-card {padding-bottom:12px;}
+#overview .simulation-note {padding-top:12px;margin-bottom:0;}
