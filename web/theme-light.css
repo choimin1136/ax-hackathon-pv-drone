@@ -483,3 +483,7 @@ body #main>footer {display:none;}
 @media(min-width:851px) {
   .topbar {padding-left:16px;}
 }
+
+/* Center the logo rays geometrically, independent of font baselines. */
+.brand-mark {line-height:1;}
+.brand-mark svg {display:block;width:76%;height:76%;}
