@@ -38,7 +38,7 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
     <div class="reinspection-grid" aria-label="재점검 구역 선택"></div>
     <p data-selection></p><button type="button" class="primary" data-confirm>선택 확정 · 예시</button>
     <p data-result role="status"></p>
-    </div><div class="reflight-column"><section class="reflight-panel" aria-label="선택 구역 재비행 시뮬레이션">
+    <p class="reinspection-help reinspection-storage-note">선택은 현재 미션에만 보관됩니다. 새로고침·미션 초기화 시 지워집니다. 실제 재비행·정비 요청은 전송하지 않습니다.</p></div><div class="reflight-column"><section class="reflight-panel" aria-label="선택 구역 재비행 시뮬레이션">
       <h3>선택 구역 재비행 · 시뮬레이션</h3>
       <p>전체 점검 완료 후 확정한 구역만 재방문합니다. 구역마다 이동 → 예시 촬영을 재생합니다. 새 사진·AI 분석은 생성하지 않으며 기존 탐지·승인 결과는 유지됩니다.</p>
       <details class="reflight-route-details"><summary>방문 순서 보기</summary><ol data-flight-route aria-label="재비행 방문 순서"></ol></details>
@@ -46,7 +46,7 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
       <p data-flight-status role="status"></p>
       <div class="reinspection-actions"><button type="button" data-flight-play>선택 구역 재비행 시작</button><button type="button" data-flight-reset>재비행 초기화</button>
       <label>재비행 속도 <select data-speed aria-label="재비행 속도"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select></label></div>
-    </section><section class="reflight-map-card" aria-label="재점검 진행 지도"><div class="reflight-map-heading"><h3>재점검 구역 지도</h3><span>6 × 4 · 예시</span></div><div class="reflight-mini-map" data-reflight-map role="list" aria-label="구역별 재점검 진행"></div><div class="reflight-map-legend"><span>· 비대상</span><span>○ 대상</span><span>◉ 촬영 중</span><span>✓ 촬영 완료</span></div><p data-reflight-map-summary role="status"></p><p class="reflight-map-note">예시 촬영 완료를 표시합니다. 새 AI 분석·결함 해소 결과는 아닙니다.</p></section></div><p class="reinspection-help reinspection-storage-note">선택은 현재 미션에만 보관됩니다. 새로고침·미션 초기화 시 지워집니다. 실제 재비행·정비 요청은 전송하지 않습니다.</p>`;
+    </section><section class="reflight-map-card" aria-label="재점검 진행 지도"><div class="reflight-map-heading"><h3>재점검 구역 지도</h3><span>6 × 4 · 예시</span></div><div class="reflight-mini-map" data-reflight-map role="list" aria-label="구역별 재점검 진행"></div><div class="reflight-map-legend"><span>· 비대상</span><span>○ 대상</span><span>◉ 촬영 중</span><span>✓ 촬영 완료</span></div><p data-reflight-map-summary role="status"></p><p class="reflight-map-note">예시 촬영 완료를 표시합니다. 새 AI 분석·결함 해소 결과는 아닙니다.</p></section></div>`;
   const mapCells = new Map();
   for (const cell of getCells()) {
     const tile = document.createElement('div');
