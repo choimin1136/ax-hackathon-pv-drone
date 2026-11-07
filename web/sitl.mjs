@@ -122,6 +122,12 @@ const isReflightRecord = next => next.cells?.length > 0 && next.cells.length < p
 // Each arrival asks the hotspot model for that cell; a new answer redraws the cells and the thermal image.
 let predictionVersion = 0;
 const predictions = createPredictions(() => { predictionVersion++; scene.render(); });
+// A new full flight starts from empty cells; earlier model answers belong to the previous photos.
+function startFreshMission() {
+  predictions.clear();
+  liveKey = '';
+  document.dispatchEvent(new CustomEvent('mission:set', { detail: { reset: true } }));
+}
 function syncLiveMission(state, t) {
   if (mode !== 'live' || reflight || reflightLive || isReflightRecord(flight)) return;
   const finished = flight.complete && t >= flight.duration_s;
@@ -240,6 +246,8 @@ async function loadLive(follow) {
   next.capture_s = CAPTURE_S / next.speedup;
   const fresh = !flight || next.duration_s < scene.time() || flight === record;
   showFlightKeepLog(next, fresh);
+  // Every viewer sees a new full flight start from empty cells, not only the person who pressed the button.
+  if (fresh && !reflight && !reflightLive && !isReflightRecord(next)) startFreshMission();
   if (follow && !fresh) scene.flyTo(next.duration_s, POLL_MS);
   else scene.setTime(next.duration_s);
 }
@@ -283,11 +291,13 @@ async function act(name, body, doneMessage, { reflightRun = false } = {}) {
     setMessage(doneMessage);
     if (name === 'stop') wasFlying = false;
     if (name === 'fly') {
-      wasFlying = true; liveKey = '';
-      if (!reflightRun) { reflightLive = null; document.dispatchEvent(new CustomEvent('mission:set', { detail: { reset: true } })); }
+      wasFlying = true;
+      // Drop the previous flight first; otherwise the reset redraw re-reads its finished cells.
       showFlight(null, '● 드론 비행 준비 중');
       clearFacts();
       scene.setTime(0);
+      if (!reflightRun) { reflightLive = null; startFreshMission(); }
+      liveKey = '';
     }
     return true;
   } catch { setMessage('서버에 연결하지 못했습니다.', true); return false; }

@@ -4,15 +4,16 @@ import path from 'node:path';
 const DEFAULT_MODEL_URL = 'https://aiopen-serving.jntp-ax.or.kr/jntp-gpu/SV-fc7f6908/predict';
 const CELL = /^[A-D]-[1-6]$/;
 const PHOTO = /\.(jpe?g|png)$/i;
-const CELL_ORDER = ['A', 'B', 'C', 'D'].flatMap(row => [1, 2, 3, 4, 5, 6].map(col => `${row}-${col}`));
 const TIMEOUT_MS = 30000;
 
 // Sends one thermal photo per cell to the hotspot model. The browser cannot call the model's domain itself (no CORS),
-// so the web server does it. Photos come from PHOTO_DIR: "A-1.jpg" style names first, otherwise sorted order.
-export function createPredictor({ env = process.env, fetchImpl = fetch } = {}) {
+// so the web server does it. Photos come from PHOTO_DIR: an "A-1.jpg" style name wins, otherwise each full flight
+// draws a random photo per cell (without repeats while the folder has enough).
+export function createPredictor({ env = process.env, fetchImpl = fetch, random = Math.random } = {}) {
   const photoDir = env.PHOTO_DIR ? path.resolve(env.PHOTO_DIR) : null;
   const modelUrl = env.MODEL_URL ?? DEFAULT_MODEL_URL;
   const cache = new Map();
+  let assigned = new Map();
 
   async function photos() {
     if (!photoDir) return [];
@@ -21,8 +22,19 @@ export function createPredictor({ env = process.env, fetchImpl = fetch } = {}) {
   async function photoFor(cellId) {
     const names = await photos();
     if (!names.length) return null;
-    return names.find(name => path.parse(name).name.toUpperCase() === cellId) ?? names[CELL_ORDER.indexOf(cellId) % names.length];
+    const named = names.find(name => path.parse(name).name.toUpperCase() === cellId);
+    if (named) return named;
+    if (!assigned.has(cellId) || !names.includes(assigned.get(cellId))) {
+      const used = new Set(assigned.values());
+      const shared = names.filter(name => !CELL.test(path.parse(name).name.toUpperCase()));
+      const free = shared.filter(name => !used.has(name));
+      const pool = free.length ? free : shared.length ? shared : names;
+      assigned.set(cellId, pool[Math.floor(random() * pool.length)]);
+    }
+    return assigned.get(cellId);
   }
+  // Called when a new full flight starts, so the next inspection draws new photos.
+  function shuffle() { assigned = new Map(); }
   async function call(name) {
     const file = path.join(photoDir, name);
     const form = new FormData();
@@ -66,5 +78,5 @@ export function createPredictor({ env = process.env, fetchImpl = fetch } = {}) {
       return { status: 502, error: 'model unavailable' };
     }
   }
-  return { status, predict };
+  return { status, predict, shuffle };
 }
