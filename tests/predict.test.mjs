@@ -21,7 +21,8 @@ async function withPhotos(names, run) {
 test('sends the cell photo to the model once and returns a short result', () => withPhotos(['A-1.jpg', 'a.jpg', 'b.png', 'notes.txt'], async dir => {
   const sent = [];
   const fetchImpl = async (url, { body }) => { const file = body.get('file'); sent.push([url, file.name]); return new Response(JSON.stringify(answer(file.name === 'A-1.jpg'))); };
-  const predictor = createPredictor({ env: { PHOTO_DIR: dir, MODEL_URL: 'http://model/predict' }, fetchImpl });
+  let draw = 0;
+  const predictor = createPredictor({ env: { PHOTO_DIR: dir, MODEL_URL: 'http://model/predict' }, fetchImpl, random: () => draw });
   assert.deepEqual(await predictor.status(), { configured: true, photos: 3 });
   const hot = await predictor.predict('A-1');
   assert.deepEqual({ ...hot, output: Boolean(hot.output) }, { cell_id: 'A-1', photo: 'A-1.jpg', image_id: 'pos', is_hotspot: true, probability: 0.76, threshold: 0.5, calibrated: false, decision_status: 'hotspot_localized', regions: [{ cx: 159, cy: 77, w: 10, h: 6 }, { cx: 390, cy: 143, w: 3, h: 2 }], output: true });
@@ -30,6 +31,11 @@ test('sends the cell photo to the model once and returns a short result', () => 
   await predictor.predict('A-1');
   assert.deepEqual(sent, [['http://model/predict', 'A-1.jpg'], ['http://model/predict', 'a.jpg'], ['http://model/predict', 'b.png']]);
   assert.equal((await predictor.predict('Z-9')).status, 400);
+  assert.equal((await predictor.predict('A-2')).photo, 'a.jpg', 'a cell keeps its photo during a flight');
+  predictor.shuffle();
+  draw = 0.99;
+  assert.equal((await predictor.predict('A-2')).photo, 'b.png', 'a new flight draws again');
+  assert.equal((await predictor.predict('A-1')).photo, 'A-1.jpg', 'a photo named after the cell always wins');
 }));
 
 test('reports missing photos and model failures, and retries a failed cell', () => withPhotos(['a.jpg'], async dir => {
