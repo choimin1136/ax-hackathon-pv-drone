@@ -70,8 +70,9 @@ export function createScene(canvas, { fillOf, isActive, onCellClick, onRender })
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('H', lx, ly);
   }
-  function drawTrail() {
-    if (!flight) return;
+  // The trail is cleared once the drone has landed, so a finished flight leaves only the cell results.
+  function drawTrail(phase) {
+    if (!flight || phase === 'done') return;
     const points = flight.positions.filter(p => p.t <= t);
     for (const [z, color, alpha] of [[0, COLORS.shadow, 0.45], [null, COLORS.trail, 0.85]]) {
       ctx.beginPath();
@@ -116,7 +117,7 @@ export function createScene(canvas, { fillOf, isActive, onCellClick, onRender })
       polygon([[-48, -18], [118, -18], [118, 78], [-48, 78]].map(([x, y]) => project(x, y)), COLORS.ground);
       drawPad();
       cells.forEach(cell => drawCell(cell, state));
-      drawTrail();
+      drawTrail(state?.phase);
       drawDrone(state?.position, state?.phase);
     }
     if (state) onRender?.(state, t);
