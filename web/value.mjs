@@ -1,4 +1,5 @@
 import {formatStarted} from './inspection-history-store.mjs';
+import {energyComparison} from './energy-dummy.mjs';
 // Illustrative assumptions only; not market prices, measured losses or official factors.
 export const DEFAULTS = { capacity: 10, utilization: 15, price: 100, carbon: 0.4, repair: 100000, low: 2, base: 5, high: 10 };
 export function validateAssumptions(a) {
@@ -29,7 +30,9 @@ export function analyzeRecord(record, assumptions) {
     if (candidate.decision in counts) counts[candidate.decision]++;
   }
   const result = calculateValue(cells.map(c=>({...c,confirmed_count:c.candidates.filter(p=>p.decision==='approved').length})),assumptions);
-  if(result.error || !result.ids.length) return {...result,counts,rows:[]};
+  // The power comparison covers every visited cell, approved or not; the value estimate stays limited to approvals.
+  const energy = result.error ? null : energyComparison(record, assumptions);
+  if(result.error || !result.ids.length) return {...result,counts,rows:[],energy};
   // A reproducible fixture for the selected calendar day, NOT telemetry or model output.
   const day = new Date(new Date(record.startedAt).getTime()+9*3600000).toISOString().slice(0,10);
   const seed = [...day].reduce((sum,c)=>sum+c.charCodeAt(0),0);
@@ -40,7 +43,7 @@ export function analyzeRecord(record, assumptions) {
     return {id,predicted,measured,difference:measured-predicted,lossPercent};
   });
   const predicted=rows.reduce((sum,r)=>sum+r.predicted,0),measured=rows.reduce((sum,r)=>sum+r.measured,0);
-  return {...result,counts,day,rows,predicted,measured,difference:measured-predicted};
+  return {...result,counts,day,rows,predicted,measured,difference:measured-predicted,energy};
 }
 
 export function createValueResults({ getRecords }) {
@@ -92,10 +95,14 @@ export function createValueResults({ getRecords }) {
     const cards = root.querySelector('[data-value-cards]'); cards.replaceChildren();
     const summary = root.querySelector('[data-value-summary]');
     if (result.error) { summary.textContent = '입력값을 수정하면 추정 결과를 다시 계산합니다.'; return; }
+    // Shown for every record with visited cells, before the approval-only value estimate below.
+    const e=result.energy;
+    if (e?.rows.length) {
+      for(const [label,value] of [['예측 발전량 · 더미',e.predicted],['실측 발전량 · 더미',e.measured],['실측 − 예측 · 더미',e.difference]]){const card=document.createElement('article');const title=document.createElement('h3');title.textContent=label;const p=document.createElement('p');p.textContent=format(value)+' kWh/일';card.append(title,p);energy.append(card);}
+      const grid=document.createElement('table');grid.innerHTML='<caption>방문 구역별 하루 발전량 비교 · 더미</caption><thead><tr><th>구역</th><th>예측 (kWh)</th><th>실측 (kWh)</th><th>차이 (kWh)</th><th>예측 대비 차이</th></tr></thead><tbody></tbody>';
+      for(const r of e.rows){const row=document.createElement('tr');for(const value of [r.id,format(r.predicted),format(r.measured),format(r.difference),'-'+r.lossPercent+'%']){const td=document.createElement('td');td.textContent=value;row.append(td);}grid.querySelector('tbody').append(row);}table.append(grid);
+    }
     if (!result.ids.length) { summary.textContent = record?'분석 대상 없음 · 이 기록에 승인한 후보가 없습니다. 점검 기록의 셀 상세에서 승인하면 해당 구역만 계산합니다.':'분석 대상 없음 · 저장된 점검 기록을 선택해야 합니다.'; return; }
-    for(const [label,value] of [['예측 발전량 · 더미',result.predicted],['실측 발전량 · 더미',result.measured],['실측 − 예측 · 더미',result.difference]]){const card=document.createElement('article');const title=document.createElement('h3');title.textContent=label;const p=document.createElement('p');p.textContent=format(value)+' kWh/일';card.append(title,p);energy.append(card);}
-    const grid=document.createElement('table');grid.innerHTML='<caption>승인 구역별 하루 발전량 비교 · 더미</caption><thead><tr><th>구역</th><th>예측 (kWh)</th><th>실측 (kWh)</th><th>차이 (kWh)</th><th>예측 대비 차이</th></tr></thead><tbody></tbody>';
-    for(const r of result.rows){const row=document.createElement('tr');for(const value of [r.id,format(r.predicted),format(r.measured),format(r.difference),'-'+r.lossPercent+'%']){const td=document.createElement('td');td.textContent=value;row.append(td);}grid.querySelector('tbody').append(row);}table.append(grid);
     summary.textContent = `승인 구역 ${result.ids.length}곳 · ${result.ids.join(', ')} · 총 수리비 가정 ${format(result.cost)}원 · 연간 금전 가치 추정 범위 ${format(result.scenarios[0].money)}~${format(result.scenarios[2].money)}원`;
     const names = {low:'낮음',base:'기준',high:'높음'};
     for (const scenario of result.scenarios) {

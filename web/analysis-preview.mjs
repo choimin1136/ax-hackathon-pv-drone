@@ -1,18 +1,20 @@
-// "고도화 미리보기" under the inspection analysis page: previews of planned features. The first two cards already use
-// the saved inspection records; the weather card uses made-up forecasts (the contest rules exclude weather data).
+// "점검 인사이트" on the inspection analysis page, above the power comparison. The first two cards use the saved
+// inspection records; the weather card uses made-up forecasts (the contest rules exclude weather data).
 import { TREND_RUNS, cellTrends, priorityCells, weatherWeek } from './analysis-insights.mjs';
 
 const root = document.getElementById('value-results');
 const section = document.createElement('section');
 section.className = 'analysis-preview';
-section.setAttribute('aria-label', '고도화 미리보기');
-section.innerHTML = `<div class="analysis-preview-head"><h3>고도화 미리보기</h3><p>앞으로 붙일 기능을 지금 데이터로 미리 보여 줍니다. 결과는 참고용입니다.</p></div>
+section.setAttribute('aria-label', '점검 인사이트');
+section.innerHTML = `<div class="analysis-preview-head"><h3>점검 인사이트</h3><p>점검 기록으로 정비 순서와 다음 점검일을 정합니다. 결과는 참고용입니다.</p></div>
   <div class="analysis-preview-grid">
-    <article class="preview-card"><span class="preview-chip">예정 · 점검 기록 사용</span><h4>정비 우선순위</h4><div data-priority></div><p class="preview-note">최근 전체 점검의 핫스팟 구역. 승인한 후보가 있는 구역을 먼저, 그다음 후보 면적×점수 순</p></article>
-    <article class="preview-card"><span class="preview-chip">예정 · 점검 기록 사용</span><h4>구역 이력·재발</h4><div data-trend></div><p class="preview-note">최근 점검 ${TREND_RUNS}회의 구역별 판정. 두 번 이상 탐지된 구역은 재발로 표시</p></article>
-    <article class="preview-card"><span class="preview-chip">예정 · 더미 기상</span><h4>기상 연계 점검일</h4><div data-weather></div><p class="preview-note">맑고 바람이 약한 날을 추천. 실제 기상 데이터가 아닙니다</p></article>
+    <article class="preview-card"><span class="preview-chip">점검 기록 기반</span><h4>정비 우선순위</h4><div data-priority></div><p class="preview-note">최근 전체 점검의 핫스팟 구역. 승인한 후보가 있는 구역을 먼저, 그다음 후보 면적×점수 순</p></article>
+    <article class="preview-card"><span class="preview-chip">점검 기록 기반</span><h4>구역 이력·재발</h4><div data-trend></div><p class="preview-note">최근 점검 ${TREND_RUNS}회의 구역별 판정. 두 번 이상 탐지된 구역은 재발로 표시</p></article>
+    <article class="preview-card"><span class="preview-chip">기상 · 더미</span><h4>기상 연계 점검일</h4><div data-weather></div><p class="preview-note">맑고 바람이 약한 날을 추천. 실제 기상 데이터가 아닙니다</p></article>
   </div>`;
-root.append(section);
+// Sits above the power comparison; falls back to the end of the page if that block is missing.
+const comparison = root.querySelector('.energy-comparison');
+if (comparison) comparison.before(section); else root.append(section);
 
 const formatDay = date => `${date.getMonth() + 1}/${date.getDate()} ${'일월화수목금토'[date.getDay()]}`;
 const formatRun = record => { const d = new Date(record.startedAt); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
