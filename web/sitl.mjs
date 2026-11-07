@@ -4,8 +4,6 @@ import { createScene, createViewToggle, followRoute } from './flight-scene.mjs';
 const PHASES = { waiting: '이륙 대기', takeoff: '이륙', moving: '셀로 이동', capture: '촬영 지점 도착', returning: '복귀', landing: '착륙', done: '비행 종료' };
 const SOURCES = { fc: 'FC', mission: 'MISSION', frame: 'FRAME' };
 const RECORD_ID = 'mission_01';
-const LIVE_ID = 'live';
-const POLL_MS = 2000;
 const LANDING_MS = 6000;
 const CELL_COLORS = { pending: '#7d8fa9', no_candidate: '#087d57', caution: '#d18a12', check: '#c63038', retake: '#713bc2' };
 
@@ -33,8 +31,8 @@ root.innerHTML = `
 
 const $ = id => document.getElementById(id);
 const card = document.querySelector('.map-card');
-let flight = null, entries = [], pollId = 0, shown = -1;
-let mission = null, missionKey = '', live = false;
+let flight = null, entries = [], shown = -1;
+let mission = null, missionKey = '';
 let record = null, reflight = null, routeKey = '';
 
 const clock = seconds => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
@@ -71,17 +69,17 @@ function renderLog(t) {
 
 const scene = createScene($('sitl-canvas'), {
   fillOf(id, state) {
-    if (live || !mission) return state?.visited.some(frame => frame.cell_id === id) ? CELL_COLORS.no_candidate : CELL_COLORS.pending;
+    if (!mission) return CELL_COLORS.pending;
     return CELL_COLORS[mission.cells.find(cell => cell.cell_id === id)?.status] ?? CELL_COLORS.pending;
   },
-  isActive: (id, state) => (live ? state?.current : reflight ? reflight.activeId : mission?.activeId) === id,
+  isActive: (id, state) => (reflight ? reflight.activeId : mission?.activeId) === id,
   onCellClick: id => [...document.querySelectorAll('#cell-grid .cell')].find(button => button.querySelector('.cell-id')?.textContent === id)?.click(),
   onRender(state, t) { renderFacts(state, t); renderLog(t); }
 });
 
 // The mission button drives the recorded flight so the drone and the site map stay on the same cell.
 function followMission() {
-  if (!flight || live || !mission || reflight) return;
+  if (!flight || !mission || reflight) return;
   const speed = Number($('speed').value);
   if (mission.phase === 'idle') { shown = -1; scene.setTime(0); return; }
   if (mission.phase === 'paused') { scene.stop(); scene.render(); return; }
@@ -115,9 +113,8 @@ function showError(message) {
   $('sitl-error').hidden = !message;
   $('sitl-error').textContent = message ?? '';
 }
-function setSource(text, isLive = false) {
+function setSource(text) {
   $('sitl-source').textContent = text;
-  $('sitl-source').classList.toggle('live', isLive);
 }
 async function fetchFlight(id) {
   const response = await fetch(`./api/missions/${encodeURIComponent(id)}`);
@@ -128,22 +125,11 @@ function showFlight(next, source) {
   flight = next;
   entries = buildLog(flight);
   scene.setFlight(flight);
-  setSource(source ?? (flight.complete ? 'SITL 비행 기록' : '● SITL 비행 중'), !source && !flight.complete);
+  setSource(source ?? 'SITL 비행 기록');
 }
 function applyFlight(next) {
   record = next;
   showFlight(next);
-}
-function pollLive() {
-  clearTimeout(pollId);
-  pollId = setTimeout(async () => {
-    try {
-      applyFlight(await fetchFlight(LIVE_ID));
-      scene.setTime(flight.duration_s);
-      showError(null);
-    } catch { showError('비행 상태를 새로 받지 못했습니다. 다시 시도합니다.'); }
-    if (flight.complete) { live = false; scene.render(); } else pollLive();
-  }, POLL_MS);
 }
 
 const toggle = createViewToggle(next => {
@@ -159,22 +145,13 @@ document.addEventListener('mission:change', event => {
   const key = `${mission.phase}:${mission.index}:${mission.activeId}:${$('speed').value}:${next?.targets.join(',')}:${next?.phase}:${next?.index}:${next?.activeId}:${document.querySelector('#reinspection [data-speed]')?.value}`;
   if (key === missionKey) { scene.render(); return; }
   missionKey = key;
-  if (!live && record && followReflight(next)) return;
+  if (record && followReflight(next)) return;
   followMission();
 });
 
 try {
-  const { missions } = await (await fetch('./api/missions')).json();
-  const liveFlight = missions.includes(LIVE_ID) ? await fetchFlight(LIVE_ID) : null;
-  if (liveFlight && !liveFlight.complete) {
-    live = true;
-    applyFlight(liveFlight);
-    scene.setTime(liveFlight.duration_s);
-    pollLive();
-  } else {
-    applyFlight(await fetchFlight(RECORD_ID));
-    followMission();
-  }
+  applyFlight(await fetchFlight(RECORD_ID));
+  followMission();
   scene.render();
 } catch {
   setSource('기록 없음');
