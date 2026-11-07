@@ -1,3 +1,4 @@
+import {createDetailMedia} from './detail-media.mjs';
 import {candidatesFor, setDecision, reviewSummary} from './review.mjs';
 
 export function createDetail({getCell, onChange}) {
@@ -8,20 +9,20 @@ export function createDetail({getCell, onChange}) {
   let renderedStatus = '';
   const dialog = document.createElement('dialog');
   dialog.className = 'detail-dialog';
-  dialog.innerHTML = `<header><div><p class="eyebrow">시뮬레이션 · 합성 예시</p><h2 id="review-title">구역 상세</h2></div><button type="button" data-close aria-label="상세 창 닫기">닫기 ×</button></header><p class="review-disclaimer">이 이미지는 도식으로 만든 예시이며 실제 열화상 사진이나 AI 예측 결과가 아닙니다.</p><div class="review-layout"><section><div class="review-toolbar"><label><input type="checkbox" data-mask checked> 결함 영역 표시</label><span>640 × 512 · 예시</span></div><div data-image class="review-image"></div><p data-empty></p></section><section><h3>후보 확인</h3><p data-summary></p><div data-candidates></div><p class="review-disclaimer">확인 결과는 이 브라우저의 메모리에만 저장됩니다. 새로고침하거나 미션을 다시 시작하면 초기화됩니다.</p></section></div>`;
+  dialog.innerHTML = `<header><div><p class="eyebrow">시뮬레이션 · 합성 예시</p><h2 id="review-title">구역 상세</h2></div><button type="button" data-close aria-label="상세 창 닫기">닫기 ×</button></header><p class="review-disclaimer">합성 사진과 별도의 합성 마스크를 겹쳐 보여줍니다. 실제 촬영 사진·AI 예측 결과·정답 라벨이 아닙니다.</p><div class="review-layout"><section><div class="review-toolbar"><label><input type="checkbox" data-mask checked> 결함 영역 표시</label><span>640 × 512 · 예시</span></div><div data-image class="review-image"></div><p data-empty></p></section><section><h3>후보 확인</h3><p data-summary></p><div data-candidates></div><p class="review-disclaimer">확인 결과는 이 브라우저의 메모리에만 저장됩니다. 새로고침하거나 미션을 다시 시작하면 초기화됩니다.</p></section></div>`;
   dialog.setAttribute('aria-labelledby','review-title');
   document.body.append(dialog);
+  const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./detail-media.css',import.meta.url).href;document.head.append(style);
+  const media=createDetailMedia({host:dialog.querySelector('[data-image]'),onReady:ready=>{
+    dialog.querySelectorAll('[data-candidates] button').forEach(button=>button.disabled=!ready);
+  }});
+  dialog.addEventListener('close',()=>media.close());
   dialog.querySelector('[data-close]').onclick = () => dialog.close();
   dialog.querySelector('[data-mask]').onchange = e => {showMask = e.target.checked; renderImage();};
   function renderImage() {
-    const cell = getCell(active);
-    const ready = cell && !['pending','retake'].includes(cell.status);
-    const image = dialog.querySelector('[data-image]');
-    image.replaceChildren();
-    if (!ready) return;
-    const panels = Array.from({length:12},(_,i)=>`<rect x="${25+i%4*150}" y="${35+Math.floor(i/4)*150}" width="135" height="130" rx="4" fill="${i%3 ? '#a66052':'#cd9560'}" stroke="#eecca3" stroke-width="2"/>`).join('');
-    const marks = showMask ? candidatesFor(cell).map((c,i)=>`<g><rect x="${c.bbox[0]}" y="${c.bbox[1]}" width="45" height="55" fill="#fff28555" stroke="${highlighted===c.id?'#ffffff':'#fff285'}" stroke-width="${highlighted===c.id?5:2}"/><text x="${c.bbox[0]}" y="${c.bbox[1]-8}" fill="white" font-size="20">${i+1}</text></g>`).join('') : '';
-    image.innerHTML = `<svg viewBox="0 0 640 512" role="img" aria-label="${active} 구역 합성 도식과 예시 결함 영역"><rect width="640" height="512" fill="#382f50"/>${panels}${marks}<text x="25" y="500" fill="white" font-size="16">SYNTHETIC DEMO · 실제 촬영 이미지 아님</text></svg>`;
+    const cell=getCell(active);
+    media.setCell(cell,cell?candidatesFor(cell):[]);
+    media.display(showMask,highlighted);
   }
   function render() {
     const cell = getCell(active);
@@ -53,15 +54,16 @@ export function createDetail({getCell, onChange}) {
       item.append(actions);list.append(item);
     });
     renderImage();
+    dialog.querySelectorAll('[data-candidates] button').forEach(button=>button.disabled=!media.ready());
   }
   return {
-    open(id) {active=id;highlighted=null;render();dialog.showModal();},
+    open(id) {media.close();active=id;highlighted=null;render();dialog.showModal();},
     refresh() {
       const cell=getCell(active);
       if(dialog.open && cell && renderedStatus!==`${cell.cell_id}:${cell.status}:${cell.candidate_count}`) render();
     },
     candidates(cell) { return candidatesFor(cell).map(c=>({...c,cell_id:cell.cell_id,decision:reviews[c.id]??'pending'})); },
     summary(cell) {return reviewSummary(cell,reviews);},
-    reset() {reviews={};if(dialog.open) dialog.close();}
+    reset() {media.close();reviews={};if(dialog.open) dialog.close();}
   };
 }
