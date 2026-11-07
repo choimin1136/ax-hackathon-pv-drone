@@ -34,36 +34,55 @@ export function makeCollapsible(card, heading, name) {
   });
 }
 
-// Shows the thermal image of the cell the drone reached last. The images are code-generated examples, not drone photos.
+// Shows the thermal image of the cell the drone reached last: the hotspot model's overlay when the server has a result,
+// otherwise a code-generated example image (never a drone photo).
 export function createThermalCard({ onOpen }) {
   const card = document.createElement('section');
   card.className = 'thermal-card';
   card.setAttribute('aria-label', '최근 촬영 열화상');
-  card.innerHTML = `<div class="sitl-log-title"><h3>촬영 이미지</h3><span>합성 예시</span></div>
+  card.innerHTML = `<div class="sitl-log-title"><h3>촬영 이미지</h3><span data-source>합성 예시</span></div>
     <button class="thermal-frame" type="button" disabled><img data-photo alt=""><img data-mask alt="" aria-hidden="true"><span class="thermal-empty">드론이 구역에 도착하면 열화상이 표시됩니다.</span></button>
     <p class="thermal-caption" role="status"></p>`;
   const frame = card.querySelector('.thermal-frame'), photo = card.querySelector('[data-photo]'), mask = card.querySelector('[data-mask]');
-  const caption = card.querySelector('.thermal-caption');
+  const caption = card.querySelector('.thermal-caption'), source = card.querySelector('[data-source]'), empty = card.querySelector('.thermal-empty');
   let shown = '', cellId = null;
   frame.addEventListener('click', () => { if (cellId) onOpen(cellId); });
 
-  function show(cell) {
+  function clear(text) {
+    photo.removeAttribute('src'); mask.removeAttribute('src');
+    card.classList.remove('has-image');
+    empty.textContent = text;
+    frame.disabled = true; cellId = null; frame.removeAttribute('aria-label');
+  }
+  function show(cell, prediction = null) {
     const ready = cell && !['pending', 'retake'].includes(cell.status);
-    const key = ready ? `${cell.cell_id}:${cell.status}:${cell.candidate_count}` : '';
+    const model = ready && prediction?.state === 'ready' && prediction.data.output ? prediction.data : null;
+    const loading = cell && !ready && prediction?.state === 'loading';
+    const key = model ? `model:${cell.cell_id}` : ready ? `${cell.cell_id}:${cell.status}:${cell.candidate_count}` : loading ? `loading:${cell.cell_id}` : '';
     if (key === shown) return;
     shown = key;
-    cellId = ready ? cell.cell_id : null;
-    frame.disabled = !ready;
-    card.classList.toggle('has-image', Boolean(ready));
-    if (!ready) { photo.removeAttribute('src'); mask.removeAttribute('src'); caption.textContent = ''; frame.removeAttribute('aria-label'); return; }
+    caption.dataset.status = ready ? cell.status : '';
+    if (loading) { clear(`${cell.cell_id} 열화상을 모델로 분석하는 중입니다…`); caption.textContent = `${cell.cell_id} · 분석 중`; return; }
+    if (!ready) { clear('드론이 구역에 도착하면 열화상이 표시됩니다.'); caption.textContent = ''; return; }
+    cellId = cell.cell_id;
+    frame.disabled = false;
+    card.classList.add('has-image');
+    frame.setAttribute('aria-label', `${cell.cell_id} 구역 상세 열기`);
+    const label = STATUS[cell.status]?.label ?? '';
+    if (model) {
+      photo.src = model.output;
+      mask.removeAttribute('src');
+      photo.alt = `${cell.cell_id} 구역 열화상과 모델이 표시한 핫스팟 영역`;
+      source.textContent = '모델 결과';
+      caption.textContent = `${cell.cell_id} · ${label} · 점수 ${model.probability.toFixed(2)}${model.calibrated ? '' : ' (보정 전)'} · 영역 ${model.regions.length}곳 · 누르면 상세`;
+      return;
+    }
     const assets = syntheticAssets(candidatesFor(cell));
     photo.src = assets.photo;
     mask.src = assets.mask;
     photo.alt = `${cell.cell_id} 구역의 합성 열화상 예시`;
-    frame.setAttribute('aria-label', `${cell.cell_id} 구역 상세 열기`);
-    const label = STATUS[cell.status]?.label ?? '';
+    source.textContent = '합성 예시';
     caption.textContent = `${cell.cell_id} · ${label}${cell.candidate_count ? ` · 후보 ${cell.candidate_count}개` : ''} · 누르면 상세`;
-    caption.dataset.status = cell.status;
   }
   return { element: card, show };
 }

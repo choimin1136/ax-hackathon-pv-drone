@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createSitlControl } from './sitl-control.mjs';
 import { createInspectionHistory } from './inspection-history.mjs';
+import { createPredictor } from './predict.mjs';
 
 const DEFAULT_WEB = fileURLToPath(new URL('../web/', import.meta.url));
 const DEFAULT_FLIGHTS = fileURLToPath(new URL('../drone/sample_flight/', import.meta.url));
@@ -53,7 +54,7 @@ function sendJson(res, status, body, head) {
   res.end(head ? undefined : JSON.stringify(body));
 }
 
-export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, historyFile = path.join(flightDir,'inspection-history.json'), basePath = '', sitlEnv = process.env, sitlHooks = {}, sitlArgsForTest } = {}) {
+export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, historyFile = path.join(flightDir,'inspection-history.json'), basePath = '', sitlEnv = process.env, sitlHooks = {}, sitlArgsForTest, predictor = createPredictor() } = {}) {
   const base = basePath.replace(/\/+$/, '');
   const sitl = createSitlControl({ flightDir, env: sitlEnv, sitlArgs: sitlArgsForTest, ...sitlHooks });
   const history = createInspectionHistory({file:historyFile,flightDir});
@@ -93,6 +94,12 @@ export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, 
     if (control) { res.writeHead(405); res.end(); return; }
 
     if (pathname === '/api/health') return sendJson(res, 200, { ok: true }, head);
+    if (pathname === '/api/predict') return sendJson(res, 200, await predictor.status(), head);
+    const cell = pathname.match(/^\/api\/predict\/([^/]+)$/);
+    if (cell) {
+      const result = await predictor.predict(cell[1]);
+      return sendJson(res, result.status ?? 200, result, head);
+    }
     if (pathname === '/api/missions') {
       const files = await readdir(flightDir).catch(() => []);
       const missions = files.filter(name => name.endsWith('.jsonl')).map(name => name.slice(0, -'.jsonl'.length)).filter(id => MISSION_ID.test(id)).sort();

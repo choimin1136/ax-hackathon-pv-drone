@@ -3,6 +3,7 @@ import { createScene, createViewToggle, followRoute } from './flight-scene.mjs';
 import { missionFromFlight } from './mission.mjs';
 import { attitudeAt, createHud } from './hud.mjs';
 import { createThermalCard, makeCollapsible } from './side-cards.mjs';
+import { createPredictions } from './predictions.mjs';
 
 const PHASES = { waiting: '이륙 대기', takeoff: '이륙', moving: '셀로 이동', capture: '촬영 지점 도착', returning: '복귀', landing: '착륙', done: '비행 종료' };
 const SOURCES = { fc: 'FC', mission: 'MISSION', frame: 'FRAME' };
@@ -118,13 +119,16 @@ function syncReflight(state, t) {
 }
 // A record of fewer cells is a reinspection reflight; it never replaces the full inspection's progress.
 const isReflightRecord = next => next.cells?.length > 0 && next.cells.length < plantCells().length;
+// Each arrival asks the hotspot model for that cell; a new answer redraws the cells and the thermal image.
+let predictionVersion = 0;
+const predictions = createPredictions(() => { predictionVersion++; scene.render(); });
 function syncLiveMission(state, t) {
   if (mode !== 'live' || reflight || reflightLive || isReflightRecord(flight)) return;
   const finished = flight.complete && t >= flight.duration_s;
-  const key = `${state.visited.length}:${state.current}:${finished}:${status?.flying}`;
+  const key = `${state.visited.length}:${state.current}:${finished}:${status?.flying}:${predictionVersion}`;
   if (key === liveKey) return;
   liveKey = key;
-  const next = missionFromFlight(state.visited.map(frame => frame.cell_id), state.current, finished, Boolean(status?.flying), Math.floor(t * flightSpeed()));
+  const next = missionFromFlight(state.visited.map(frame => frame.cell_id), state.current, finished, Boolean(status?.flying), Math.floor(t * flightSpeed()), predictions.resultOf);
   document.dispatchEvent(new CustomEvent('mission:set', { detail: { mission: next } }));
 }
 
@@ -138,7 +142,7 @@ const scene = createScene($('sitl-canvas'), {
     renderFacts(state, t); renderLog(t); syncLiveMission(state, t); syncReflight(state, t);
     const attitude = attitudeAt(flight, t);
     $('hud-source').textContent = attitude?.measured ? '자세: 드론 비행 제어기 값' : '자세: 위치 기록으로 계산한 근사값';
-    thermal.show(mission?.cells.find(cell => cell.cell_id === state.last_cell));
+    thermal.show(mission?.cells.find(cell => cell.cell_id === state.last_cell), mode === 'live' && state.last_cell ? predictions.peek(state.last_cell) : null);
     hud.draw({ attitude, phase: PHASES[state.phase], armed: !['waiting', 'done'].includes(state.phase), time: clock(t * flightSpeed()) });
     if (reflightLive && flight && flight !== record) document.dispatchEvent(new CustomEvent('sitl:flight', { detail: { flight, t } }));
   }
