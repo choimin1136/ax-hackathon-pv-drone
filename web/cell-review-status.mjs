@@ -5,7 +5,7 @@ export function cellReviewStatus(cell, counts) {
   if (['pending','retake'].includes(cell.status) || !cell.candidate_count) {
     return { key:cell.status,label:STATUS[cell.status].label,style:cell.status,symbol:STATUS[cell.status].symbol,action:STATUS[cell.status].action };
   }
-  if (counts.pending > 0) return {key:'review_pending',label:'미확인 후보 있음',style:cell.status,symbol:'?',action:`미확인 후보 ${counts.pending}개를 확인하세요. 승인 ${counts.approved}개 · 제외 ${counts.excluded}개.`};
+  if (counts.pending > 0) return {key:'review_pending',label:'미확인 후보 있음',style:cell.status,symbol:STATUS[cell.status].symbol,action:`미확인 후보 ${counts.pending}개를 확인하세요. 승인 ${counts.approved}개 · 제외 ${counts.excluded}개.`};
   if (counts.approved > 0) return {key:'approved',label:'승인 후보 있음',style:cell.status,symbol:'!',action:`후보 ${counts.approved}개를 승인했습니다. 근거를 바탕으로 재점검·정비 여부를 판단하세요.`};
   return {key:'excluded',label:'후보 모두 제외',style:'excluded',symbol:'−',action:'탐지 후보를 모두 제외했습니다. 탐지 결과를 삭제하거나 안전을 보증한 것은 아닙니다. 필요하면 미확인으로 되돌리세요.'};
 }

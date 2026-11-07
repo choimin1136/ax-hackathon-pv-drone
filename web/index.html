@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#142c29">
+  <meta name="theme-color" content="#ffffff">
   <meta name="description" content="태양광 발전소의 점검 과정을 체험하는 시뮬레이션 대시보드">
   <title>Solar Loop · 태양광 점검 대시보드</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./theme-light.css">
   <script type="module" src="./app.mjs"></script>
+  <script type="module" src="./navigation.mjs"></script>
 </head>
 <body>
   <a class="skip" href="#main">본문으로 이동</a>
@@ -17,7 +19,20 @@
     <div class="top-context">태양광 점검 관제 <span class="divider">/</span> TEAM 01</div>
     <span class="simulation-badge"><i></i> 시뮬레이션</span>
   </header>
+  <details class="dashboard-nav" open>
+    <summary>메뉴 <span aria-hidden="true">☰</span></summary>
+    <nav aria-label="대시보드 메뉴">
+      <p class="nav-caption">WORKSPACE</p>
+      <a href="#overview" aria-current="location"><span aria-hidden="true">01</span>점검 현황</a>
+      <a href="#reinspection"><span aria-hidden="true">02</span>재점검 대상</a>
+      <a href="#value-results"><span aria-hidden="true">03</span>금전·공공 가치</a>
+      <a href="#report"><span aria-hidden="true">04</span>점검 보고서</a>
+      <a href="#activity"><span aria-hidden="true">05</span>미션 기록</a>
+      <p class="nav-note">메뉴별 화면에서<br>점검 결과를 확인하세요.</p>
+    </nav>
+  </details>
   <main id="main">
+    <section id="overview" aria-label="점검 현황">
     <div class="page-heading">
       <div><p class="eyebrow">SOLAR INSPECTION / OVERVIEW</p><h1>발전소 점검 현황<span class="heading-dot">.</span></h1><p class="intro">구역별 상태를 살펴보고, 점검 미션의 흐름을 체험하세요.</p></div>
       <div class="heading-meta"><span class="demo-chip">가상 발전소 01</span><span>6 × 4 구역 · 예시 데이터</span></div>
@@ -59,10 +74,11 @@
         </section>
       </aside>
     </div>
-    <section id="value-results" class="reinspection-card value-results" aria-label="금전·공공 가치 결과"></section>
+    </section>
     <section id="reinspection" class="reinspection-card" aria-label="재점검 대상 선택"></section>
+    <section id="value-results" class="reinspection-card value-results" aria-label="금전·공공 가치 결과"></section>
     <section id="report" class="reinspection-card" aria-label="점검 보고서"></section>
-    <section class="activity-card" aria-labelledby="activity-title"><div class="activity-heading"><h2 id="activity-title">미션 기록</h2><span>최근 이벤트 · 예시 시나리오</span></div><ol id="events"><li class="empty-event">미션을 시작하면 구역별 진행 기록이 여기에 표시됩니다.</li></ol></section>
+    <section id="activity" class="activity-card" aria-labelledby="activity-title"><div class="activity-heading"><h2 id="activity-title">미션 기록</h2><span>최근 이벤트 · 예시 시나리오</span></div><ol id="events"><li class="empty-event">미션을 시작하면 구역별 진행 기록이 여기에 표시됩니다.</li></ol></section>
     <footer><span>SOLAR LOOP <span class="footer-divider">/</span> 2026 전남광주 기업 AX 혁신 챌린지</span><span>첫 화면 프로토타입 · AI 판단은 참고용입니다</span></footer>
     <p id="announcement" class="sr-only" role="status" aria-live="polite"></p>
     <noscript><p>이 대시보드를 사용하려면 브라우저에서 JavaScript를 켜주세요.</p></noscript>
