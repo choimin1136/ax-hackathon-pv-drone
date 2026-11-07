@@ -6,7 +6,7 @@ import { createScene, createViewToggle } from './flight-scene.mjs';
 const card = document.querySelector('.reflight-map-card');
 const stage = document.createElement('div');
 stage.className = 'reflight-stage';
-stage.innerHTML = '<canvas role="img" aria-label="선택 구역 드론 재비행의 3D 화면. 구역별 진행은 2D 지도에서도 확인할 수 있습니다."></canvas><span class="sitl-source">드론 비행 대기</span><span class="sitl-hint" aria-hidden="true">H: 이륙장 · 드래그: 회전</span>';
+stage.innerHTML = '<canvas role="img" aria-label="선택 구역 드론 재비행의 3D 화면. 구역별 진행은 2D 지도에서도 확인할 수 있습니다."></canvas><span class="sitl-source">드론 비행 대기</span>';
 card.querySelector('.reflight-mini-map').before(stage);
 const note = document.createElement('p');
 note.className = 'reflight-map-note reflight-3d-note';

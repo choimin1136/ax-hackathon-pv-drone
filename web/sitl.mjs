@@ -26,7 +26,6 @@ root.innerHTML = `
   <div class="sitl-stage">
     <canvas id="sitl-canvas" role="img" aria-label="이륙장에서 출발해 가상 발전소 위를 비행하는 드론의 3D 화면. 현재 값은 아래 비행 상태에서 확인할 수 있습니다."></canvas>
     <span id="sitl-source" class="sitl-source">기록 불러오는 중</span>
-    <span class="sitl-hint" aria-hidden="true">H: 이륙장 · 드래그: 회전 · 셀 클릭: 상세</span>
   </div>
   <p id="sitl-copy" class="sitl-copy"></p>
   <dl class="sitl-facts">
