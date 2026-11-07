@@ -479,3 +479,7 @@ body #main>footer {display:none;}
 /* Balance the disclaimer between its divider and the card's bottom edge. */
 #overview .mission-card {padding-bottom:12px;}
 #overview .simulation-note {padding-top:12px;margin-bottom:0;}
+/* Align desktop branding with the sidebar menu's left edge. */
+@media(min-width:851px) {
+  .topbar {padding-left:16px;}
+}
