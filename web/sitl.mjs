@@ -54,6 +54,11 @@ document.querySelector('.map-card .legend').after(document.querySelector('.overv
 const openCell = id => [...document.querySelectorAll('#cell-grid .cell')].find(button => button.querySelector('.cell-id')?.textContent === id)?.click();
 const thermal = createThermalCard({ onOpen: openCell });
 document.querySelector('.mission-card').after(thermal.element);
+// Keep the two primary cards aligned with the map; telemetry continues below.
+const primaryCards = document.createElement('div');
+primaryCards.className = 'overview-primary-cards';
+document.querySelector('.mission-card').before(primaryCards);
+primaryCards.append(document.querySelector('.mission-card'), thermal.element);
 for (const [card, name] of [[thermal.element, 'thermal'], [hudCard, 'hud'], [logCard, 'log']]) makeCollapsible(card, card.querySelector('.sitl-log-title'), name);
 
 const controls = document.createElement('div');
