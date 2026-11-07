@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SunPatch">
+  <title>SunPatch</title>
+  <rect width="64" height="64" rx="16" fill="#2563eb"/>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M17 38a15 15 0 0 1 30 0" stroke-width="3.4"/>
+    <path d="M32 11v4.5M15.7 17.7l3 3M48.3 17.7l-3 3" stroke-width="3"/>
+    <path d="M10 38h44" stroke-width="3.4"/>
+    <path d="M15 45.5h34M20 52.5h24" stroke-width="2.6"/>
+  </g>
+  <path d="M32 27.5v7.5M28.25 31.25h7.5" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round"/>
+</svg>
