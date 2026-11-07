@@ -30,23 +30,24 @@ export function reportFile(body) {
 }
 export function createReport({ getSnapshot }) {
   const root = document.getElementById('report');
-  root.innerHTML = '<h2>점검 보고서</h2><p>현재 점검·후보 확인·가치 추정을 검토용 보고서로 만듭니다. 생성 이후 변경은 다시 생성해야 반영됩니다. 내려받은 HTML은 인터넷 없이 열거나 브라우저에서 인쇄할 수 있습니다.</p><button type="button" data-report-create>현재 결과로 보고서 만들기</button>';
-  const dialog = document.createElement('dialog');
-  dialog.className = 'report-dialog'; dialog.setAttribute('aria-label','점검 보고서 미리보기');
-  dialog.innerHTML = '<div class="report-actions"><button type="button" data-report-download>HTML 보고서 다운로드</button><button type="button" data-report-close>보고서 닫기</button></div><p role="status" data-report-message></p><div data-report-content></div>';
-  document.body.append(dialog);
+  root.innerHTML = '<div class="report-page-heading"><div><p class="eyebrow">INSPECTION REPORT</p><h2>점검 보고서</h2><p>점검 결과·후보 확인·점검 분석을 보고서로 미리 확인하세요.</p></div><div class="report-preview-actions"><button type="button" data-report-create>현재 결과로 새로고침</button><button type="button" data-report-download>HTML 보고서 다운로드</button></div></div><p class="report-preview-status" role="status" data-report-message></p><iframe class="report-preview-frame" title="점검 보고서 미리보기" sandbox=""></iframe>';
+  const frame = root.querySelector('iframe');
   let body = '';
-  root.querySelector('[data-report-create]').onclick = () => {
-    body = buildReport({...getSnapshot(),generatedAt:new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})+' (한국 시간)'});
-    dialog.querySelector('[data-report-content]').innerHTML = body;
-    dialog.querySelector('[data-report-message]').textContent = '생성 시점의 결과입니다. 최신 결과가 필요하면 닫고 다시 생성하세요.';
-    dialog.showModal(); dialog.scrollTop = 0;
-  };
-  dialog.querySelector('[data-report-close]').onclick = () => dialog.close();
-  dialog.querySelector('[data-report-download]').onclick = () => {
+  function refresh() {
+    const generatedAt = new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}) + ' (한국 시간)';
+    body = buildReport({...getSnapshot(),generatedAt});
+    frame.srcdoc = reportFile(body);
+    root.querySelector('[data-report-message]').textContent = '미리보기 생성: ' + generatedAt + ' · 생성 시점의 사본입니다. 변경 사항은 새로고침하면 반영됩니다.';
+  }
+  root.querySelector('[data-report-create]').onclick = refresh;
+  document.addEventListener('dashboard:viewchange', event => {
+    if (event.detail.id === 'report') refresh();
+  });
+  root.querySelector('[data-report-download]').onclick = () => {
+    if (!body) refresh();
     const url = URL.createObjectURL(new Blob([reportFile(body)],{type:'text/html;charset=utf-8'}));
     const a = document.createElement('a'); a.href = url; a.download = 'solar-inspection-report.html'; document.body.append(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-    dialog.querySelector('[data-report-message]').textContent = 'HTML 파일 다운로드를 요청했습니다. 파일을 열어 브라우저의 인쇄 기능으로 PDF 저장도 가능합니다.';
+    root.querySelector('[data-report-message]').textContent = '현재 미리보기와 동일한 HTML 파일 다운로드를 요청했습니다. 파일을 열어 인쇄하거나 PDF로 저장할 수 있습니다.';
   };
 }
