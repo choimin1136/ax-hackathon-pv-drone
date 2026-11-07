@@ -8,8 +8,8 @@ test('visits all 24 areas once and keeps failed capture out of no-candidate resu
   assert.equal(mission.phase, 'complete');
   assert.equal(new Set(mission.events.map(e => e.cell_id)).size, 24);
   assert.deepEqual(mission.events.map(e => e.cell_id).reverse(), ROUTE);
-  assert.deepEqual(summarize(mission), { completed: 24, clear: 16, review: 7, retake: 1 });
-  assert.equal(mission.cells.find(c => c.cell_id === 'C-6').status, 'retake');
+  assert.deepEqual(summarize(mission), { completed: 24, clear: 16, review: 8, retake: 0 });
+  assert.equal(mission.cells.find(c => c.cell_id === 'C-6').status, 'check');
   assert.deepEqual(tickMission(mission), mission);
 });
 test('pause freezes an active analysis and resume completes that same area', () => {

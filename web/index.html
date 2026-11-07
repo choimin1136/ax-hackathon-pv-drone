@@ -50,7 +50,7 @@
           <div class="map-bottom"><span id="flight-position">미션을 시작하면 가상 경로가 표시됩니다</span><label class="route-toggle"><input id="show-route" type="checkbox" checked> 경로 표시</label></div>
         </div>
         <div id="sitl"></div>
-        <div class="legend" aria-label="구역 상태 범례"><span><i class="dot gray"></i>대기</span><span><i class="dot green"></i>탐지된 후보 없음</span><span><i class="dot amber"></i>주의</span><span><i class="dot red"></i>점검 권장</span><span><i class="dot violet"></i>재촬영 필요</span></div>
+        <div class="legend" aria-label="구역 상태 범례"><span><i class="dot gray"></i>대기</span><span><i class="dot green"></i>핫스팟 없음</span><span><i class="dot red"></i>핫스팟 탐지</span></div>
         <div class="map-help"><span aria-hidden="true">↗</span> 구역을 누르면 이미지와 탐지 후보를 바로 확인할 수 있어요.</div>
       </section>
       <aside class="side-column">
@@ -64,8 +64,8 @@
           <p class="simulation-note">구역 판정은 예시이고, 비행은 가상 드론 기록입니다.<br>실제 드론과 AI는 연결되지 않았습니다.</p>
         </section>
     <section class="metrics overview-summary" aria-label="점검 요약">
-      <article class="metric"><span><i class="dot green"></i>탐지된 후보 없음</span><p><strong id="clear-count">0</strong><small>구역</small></p><span class="metric-note">탐지 결과가 안전을 보증하지 않습니다</span></article>
-      <article class="metric"><span><i class="dot amber"></i>확인 필요</span><p><strong id="review-count">0</strong><small>구역</small></p><span class="metric-note">주의 · 점검 권장</span></article>
+      <article class="metric"><span><i class="dot green"></i>핫스팟 없음</span><p><strong id="clear-count">0</strong><small>구역</small></p><span class="metric-note">탐지 결과가 안전을 보증하지 않습니다</span></article>
+      <article class="metric"><span><i class="dot red"></i>핫스팟 탐지</span><p><strong id="review-count">0</strong><small>구역</small></p><span class="metric-note">근거 사진 확인이 필요한 구역</span></article>
       <article class="metric"><span><i class="dot violet"></i>재촬영 필요</span><p><strong id="retake-count">0</strong><small>구역</small></p><span class="metric-note">사진 확보가 필요한 구역</span></article>
     </section>
         <section hidden class="detail-card" aria-labelledby="detail-title">
