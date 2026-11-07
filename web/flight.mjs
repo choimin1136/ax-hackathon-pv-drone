@@ -30,7 +30,8 @@ export function positionAt(positions, t) {
   const a = positions[i], b = positions[i + 1];
   if (!b || b.t === a.t) return a;
   const k = (t - a.t) / (b.t - a.t);
-  return { ...a, t, x_m: a.x_m + (b.x_m - a.x_m) * k, y_m: a.y_m + (b.y_m - a.y_m) * k, rel_alt_m: a.rel_alt_m + (b.rel_alt_m - a.rel_alt_m) * k };
+  const mix = key => a[key] != null && b[key] != null ? a[key] + (b[key] - a[key]) * k : a[key];
+  return { ...a, t, x_m: mix('x_m'), y_m: mix('y_m'), rel_alt_m: mix('rel_alt_m'), roll: mix('roll'), pitch: mix('pitch') };
 }
 
 export function phaseAt(flight, t) {

@@ -1,6 +1,7 @@
 import { buildLog, logUntil, routeFlight, targetTime } from './flight.mjs';
 import { createScene, createViewToggle, followRoute } from './flight-scene.mjs';
 import { missionFromFlight } from './mission.mjs';
+import { attitudeAt, createHud } from './hud.mjs';
 
 const PHASES = { waiting: '이륙 대기', takeoff: '이륙', moving: '셀로 이동', capture: '촬영 지점 도착', returning: '복귀', landing: '착륙', done: '비행 종료' };
 const SOURCES = { fc: 'FC', mission: 'MISSION', frame: 'FRAME' };
@@ -39,6 +40,13 @@ logCard.className = 'flight-log-card';
 logCard.setAttribute('aria-label', '드론 비행 로그');
 logCard.innerHTML = '<div class="sitl-log-title"><h3>드론 로그</h3><span id="sitl-log-count"></span></div><ol id="sitl-log" class="sitl-log" tabindex="0" aria-label="드론 비행 로그"></ol>';
 document.querySelector('.side-column').append(logCard);
+
+const hudCard = document.createElement('section');
+hudCard.className = 'hud-card';
+hudCard.setAttribute('aria-label', '드론 비행 계기');
+hudCard.innerHTML = '<div class="sitl-log-title"><h3>비행 계기</h3><span id="hud-source"></span></div><canvas role="img" aria-label="드론의 자세, 방위, 속도, 고도를 보여 주는 비행 계기. 같은 값은 아래 비행 상태에서도 확인할 수 있습니다."></canvas>';
+document.querySelector('.side-column').prepend(hudCard);
+const hud = createHud(hudCard.querySelector('canvas'));
 
 const controls = document.createElement('div');
 controls.id = 'live-controls';
@@ -118,6 +126,9 @@ const scene = createScene($('sitl-canvas'), {
   onCellClick: id => [...document.querySelectorAll('#cell-grid .cell')].find(button => button.querySelector('.cell-id')?.textContent === id)?.click(),
   onRender(state, t) {
     renderFacts(state, t); renderLog(t); syncLiveMission(state, t); syncReflight(state, t);
+    const attitude = attitudeAt(flight, t);
+    $('hud-source').textContent = attitude?.measured ? '자세: 드론 비행 제어기 값' : '자세: 위치 기록으로 계산한 근사값';
+    hud.draw({ attitude, phase: PHASES[state.phase], armed: !['waiting', 'done'].includes(state.phase), time: clock(t * flightSpeed()) });
     if (reflightLive && flight && flight !== record) document.dispatchEvent(new CustomEvent('sitl:flight', { detail: { flight, t } }));
   }
 });
@@ -126,6 +137,7 @@ function showFlight(next, source) {
   flight = next;
   entries = next ? buildLog(next) : [];
   scene.setFlight(next);
+  if (!next) { hud.draw(null); $('hud-source').textContent = ''; }
   shown = -1;
   $('sitl-log').replaceChildren();
   $('sitl-log-count').textContent = next ? '' : '0 / 0';

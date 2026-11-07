@@ -29,7 +29,7 @@ export function summarizeFlight(missionId, rows) {
     cells: start?.cells ?? [],
     complete: Boolean(end),
     duration_s: rows.at(-1)?.t ?? 0,
-    positions: rows.filter(row => row.type === 'position').map(({ t, position, heading, battery }) => ({ t, ...position, heading, battery })),
+    positions: rows.filter(row => row.type === 'position').map(({ t, position, heading, battery, roll, pitch }) => ({ t, ...position, heading, battery, roll, pitch })),
     frames: frames.map(({ t, cell_id, waypoint, source_photo, position, battery }) => ({ t, cell_id, waypoint, source_photo, position, battery })),
     logs: rows.filter(row => row.type === 'log').map(({ t, source, text }) => ({ t, source, text }))
   };
