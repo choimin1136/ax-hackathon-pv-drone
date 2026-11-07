@@ -47,8 +47,8 @@ export function createReinspection({ getCells, getSummary, getRecords=()=>[], is
     <p data-selection></p><button type="button" class="primary" data-confirm>선택 확정 · 예시</button>
     <p data-result role="status"></p>
     <p class="reinspection-help reinspection-storage-note">선택은 현재 미션에만 보관됩니다. 새로고침·미션 초기화 시 지워집니다. 실제 재비행·정비 요청은 전송하지 않습니다.</p></div><div class="reflight-column"><section class="reflight-panel" aria-label="선택 구역 재비행 시뮬레이션">
-      <h3>선택 구역 재비행 · 시뮬레이션</h3>
-      <p>확정한 구역만 방문합니다. 구역마다 이동 → 예시 촬영을 재생합니다. 새 사진·AI 분석은 생성하지 않으며 기존 탐지·승인 결과는 유지됩니다.</p>
+      <h3>선택 구역 드론 재비행</h3>
+      <p>확정한 구역만 드론이 다시 비행합니다. 점검 현황에서 드론을 켠 뒤 시작하세요. 진행은 아래 지도와 점검 현황에 함께 표시되고, 기존 탐지·승인 결과는 유지됩니다.</p>
       <details class="reflight-route-details"><summary>방문 순서 보기</summary><ol data-flight-route aria-label="재비행 방문 순서"></ol></details>
       <progress data-flight-progress max="1" value="0" aria-label="재비행 진행률"></progress>
       <p data-flight-status role="status"></p>
@@ -168,9 +168,10 @@ export function createReinspection({ getCells, getSummary, getRecords=()=>[], is
         onFlightChange();
         return;
       }
-      external = false; notice = '';
-      if (flight.phase === 'idle' || flight.phase === 'complete') flight = createReflight(targets);
-      flight = startReflight(flight);
+      // Without the drone controller there is no example playback; the reflight only runs on the drone.
+      notice = '드론 연결을 확인할 수 없습니다. 점검 현황에서 드론을 켠 뒤 다시 시작하세요.';
+      onFlightChange();
+      return;
     }
     onFlightChange(); schedule();
   };

@@ -125,3 +125,5 @@
 #overview:not([data-mode="live"]) .mission-card .live-status {display:none;}
 .mission-card .card-heading .live-status {flex:none;margin-left:auto;}
 .mission-card .card-heading .sim-pill {white-space:nowrap;}
+/* The reflight speed only paced the removed example playback; drone reflights use the server's speed. */
+#reinspection label:has(> [data-speed]) {display:none;}
