@@ -20,7 +20,7 @@ function showView(moveFocus = false) {
     else link.removeAttribute('aria-current');
   });
   if (mobile.matches) menu.open = false;
-  document.title = `${links[current].lastChild.textContent.trim() || '점검 기록'} · Solar Loop`;
+  document.title = `${links[current].lastChild.textContent.trim() || '점검 기록'} · SOLAR SCAN`;
   if (moveFocus) {
     sections[current].tabIndex = -1;
     sections[current].focus({preventScroll: true});
