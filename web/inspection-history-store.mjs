@@ -9,7 +9,7 @@ export function snapshotCells(cells, getCandidates) {
   });
 }
 export function recordRecommendations(record) {
-  return record.cells.filter(c=>record.targets.includes(c.cell_id)).filter(c=>c.status==='retake' || c.candidates.some(p=>p.decision!=='excluded') || (['check','caution'].includes(c.status)&&!c.candidates.length)).map(c=>c.cell_id);
+  return record.cells.filter(c=>record.targets.includes(c.cell_id)&&record.visited.includes(c.cell_id)).filter(c=>c.status==='retake' || c.candidates.some(p=>p.decision!=='excluded') || (['check','caution'].includes(c.status)&&!c.candidates.length)).map(c=>c.cell_id);
 }
 // Old records may contain the previous full inspection. Expose only this flight's completed visits.
 export function flightRecordCells(record) {

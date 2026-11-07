@@ -15,3 +15,6 @@
 .flight-history-map .map-surface{padding:16px}
 .flight-history-map .card-heading{margin-bottom:14px}
 .flight-history-map [data-back]{border:1px solid #dce2ec;border-radius:8px;background:white;padding:8px 12px;color:#52617a;font:inherit;cursor:pointer}
+.recommendation-source{display:flex;align-items:center;gap:12px;font-size:13px;color:#52617a;margin:12px 0 6px}
+.recommendation-source select{flex:1;min-width:0;max-width:100%;padding:9px 12px;border:1px solid #dce2ec;border-radius:8px;background:#fff;color:#334155;font:inherit}
+#reinspection [data-history-note]{font-size:12px;margin:0 0 12px}

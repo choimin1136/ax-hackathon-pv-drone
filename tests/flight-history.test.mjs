@@ -52,3 +52,22 @@ test('reflight masks non-target and not-yet-visited cells, including legacy reco
  assert.equal(x.store.list()[0].cells.find(c=>c.cell_id==='B-2').status,'check');
  assert.equal(createHistoryStore(x.storage).list()[0].cells.find(c=>c.cell_id==='C-4').status,'pending');
 });
+
+test('dated recommendations use that records decisions and completed targets only',async()=>{
+ const {recordRecommendations}=await import('../web/inspection-history-store.mjs');
+ const record={targets:['A-3','B-2','C-4'],visited:['A-3','B-2'],cells:[
+ {cell_id:'A-3',status:'check',candidates:[{decision:'excluded'}]},
+ {cell_id:'B-2',status:'check',candidates:[{decision:'approved'}]},
+ {cell_id:'C-4',status:'check',candidates:[{decision:'pending'}]}]};
+ assert.deepEqual(recordRecommendations(record),['B-2']);
+ const other=structuredClone(record);other.cells[0].candidates[0].decision='pending';other.cells[1].candidates[0].decision='excluded';
+ assert.deepEqual(recordRecommendations(other),['A-3']);assert.deepEqual(recordRecommendations(record),['B-2']);
+});
+test('reflight from a historical source retains that source after current mission reset',()=>{
+ const x=setup();let past=startMission(createMission());for(let i=0;i<48;i++)past=tickMission(past);
+ const snapshot=cells(past),current=createMission();let flight=startReflight(createReflight(['A-3']));
+ x.observe(current,flight,cells(current),'demo',snapshot);
+ for(let i=0;i<2;i++){flight=tickReflight(flight);x.observe(current,flight,cells(current),'demo',snapshot);}
+ assert.equal(x.store.list()[0].cells.find(c=>c.cell_id==='A-3').status,'check');
+ assert.equal(current.cells.find(c=>c.cell_id==='A-3').status,'pending');
+});

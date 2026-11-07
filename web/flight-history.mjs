@@ -65,9 +65,9 @@ export function createFlightHistory({getCandidates}) {
     note.textContent=store.error()||'이 브라우저에 저장 · 비행 시작 관측 시각(한국 시간) · 합성 판정/이미지';
   }
   renderList();
-  return {observe(state,flight){
+  return {records:()=>store.list(),observe(state,flight,referenceCells){
     const cells=snapshotCells(state.cells,getCandidates),key=JSON.stringify([state.phase,state.index,flight.phase,flight.index,cells]);
     if(signature===key)return;signature=key;
-    if(record(state,flight,cells,document.getElementById('overview').dataset.mode??'demo'))renderList();
+    if(record(state,flight,cells,document.getElementById('overview').dataset.mode??'demo',referenceCells))renderList();
   }};
 }
