@@ -48,7 +48,7 @@ def select_cells(names):
 
 
 class Drone:
-    TYPES = ["GLOBAL_POSITION_INT", "SYS_STATUS", "HEARTBEAT", "COMMAND_ACK", "MISSION_ITEM_REACHED", "STATUSTEXT"]
+    TYPES = ["GLOBAL_POSITION_INT", "ATTITUDE", "SYS_STATUS", "HEARTBEAT", "COMMAND_ACK", "MISSION_ITEM_REACHED", "STATUSTEXT"]
 
     def __init__(self, url, mission_id):
         self.mission_id = mission_id
@@ -56,6 +56,7 @@ class Drone:
         self.home = None
         self.pos = None
         self.battery = None
+        self.attitude = {}
         self.t0 = None
         self.last_write = 0
         self.m = mavutil.mavlink_connection(url)
@@ -81,6 +82,8 @@ class Drone:
             print("[fc]", msg.text)
             if self.t0 is not None:
                 self.write("log", source="fc", text=msg.text)
+        elif kind == "ATTITUDE":
+            self.attitude = {"roll": round(math.degrees(msg.roll), 1), "pitch": round(math.degrees(msg.pitch), 1)}
         elif kind == "SYS_STATUS" and msg.battery_remaining >= 0:
             self.battery = msg.battery_remaining
         elif kind == "GLOBAL_POSITION_INT" and msg.lat != 0:
@@ -94,7 +97,7 @@ class Drone:
             }
             if self.t0 is not None and time.monotonic() - self.last_write >= 0.5:
                 self.last_write = time.monotonic()
-                self.write("position", position=self.pos, heading=msg.hdg / 100, battery=self.battery)
+                self.write("position", position=self.pos, heading=msg.hdg / 100, battery=self.battery, **self.attitude)
         return msg
 
     def wait_home(self):

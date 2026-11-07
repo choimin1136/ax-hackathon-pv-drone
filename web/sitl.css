@@ -72,3 +72,5 @@
   #overview .map-card[data-map-view="2d"] .map-surface {flex:1 1 auto;}
   #overview .map-card[data-map-view="2d"] #sitl {display:none;}
 }
+.hud-card {min-width:0;padding:16px 20px;border:1px solid var(--line);border-radius:16px;background:#fff;}
+.hud-card canvas {display:block;width:100%;aspect-ratio:4/3;border-radius:10px;background:#0a1424;}
