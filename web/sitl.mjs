@@ -364,9 +364,24 @@ const toggle = createViewToggle(next => {
 card.querySelector('.card-heading').append(toggle.element);
 toggle.set('3d');
 
+// app.mjs draws the card for the full inspection; while the drone flies a reflight the card shows that flight instead.
+function paintMissionCard(next) {
+  const active = mode === 'live' && Boolean(reflightLive) && next && next.phase !== 'idle';
+  const total = active ? next.targets.length : plantCells().length;
+  document.querySelector('.mission-facts strong').textContent = `${total}개`;
+  document.querySelector('.mission-facts span').textContent = active ? '재비행 구역' : '대상 구역';
+  $('progress').max = total;
+  if (!active) return;
+  const percent = Math.round(next.index / total * 100);
+  $('progress').value = next.index;
+  $('progress').textContent = $('progress-text').textContent = `${percent}%`;
+  $('elapsed').textContent = clock(next.elapsed ?? 0);
+  $('phase-pill').textContent = next.phase === 'complete' ? '재비행 완료' : '재비행 중';
+}
 document.addEventListener('mission:change', event => {
   mission = event.detail;
   const next = mission.reflight;
+  paintMissionCard(next);
   const key = `${mission.phase}:${mission.index}:${mission.activeId}:${$('speed').value}:${next?.targets.join(',')}:${next?.phase}:${next?.index}:${next?.activeId}:${document.querySelector('#reinspection [data-speed]')?.value}`;
   if (mode === 'live' && reflightLive) $('mission-copy').textContent = next?.phase === 'complete' ? '재점검 대상 구역의 드론 재비행을 마쳤습니다.' : '재점검 대상 구역을 드론으로 다시 비행하고 있습니다.';
   else if (mode === 'live' && !next?.targets.length) { $('mission-copy').textContent = status?.flying ? '드론이 구역을 비행하고 있습니다.' : '드론을 켠 뒤 비행을 시작하세요. 도착한 구역부터 결과가 표시됩니다.'; }
