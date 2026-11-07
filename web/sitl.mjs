@@ -1,6 +1,6 @@
 import { CELL_COLORS } from './panel-colors.mjs';
-import { buildLog, logUntil, plantCells, routeFlight, targetTime } from './flight.mjs';
-import { createScene, createViewToggle, followRoute } from './flight-scene.mjs';
+import { buildLog, logUntil, plantCells, targetTime } from './flight.mjs';
+import { createScene, createViewToggle } from './flight-scene.mjs';
 import { missionFromFlight } from './mission.mjs';
 import { attitudeAt, createHud } from './hud.mjs';
 import { createThermalCard, makeCollapsible } from './side-cards.mjs';
@@ -188,24 +188,8 @@ function followReflight(next) {
     scene.render();
     return true;
   }
-  if (!active) {
-    if (!reflight) return false;
-    reflight = null; routeKey = '';
-    if (mode === 'demo') {
-      showFlight(record, '드론 비행 기록');
-      scene.setTime(mission?.phase === 'complete' ? record.duration_s : 0);
-    } else loadLive(false).catch(() => {});
-    return true;
-  }
-  reflight = active;
-  const key = active.targets.join(',');
-  if (key !== routeKey) {
-    routeKey = key;
-    showFlight(routeFlight(active.targets), '경로 시뮬레이션');
-    scene.setTime(0);
-  }
-  followRoute(scene, flight, active, Number(document.querySelector('#reinspection [data-speed]').value));
-  return true;
+  // Reflights are always flown by the drone; there is no calculated stand-in route any more.
+  return false;
 }
 function showError(message) {
   $('sitl-error').hidden = !message;
@@ -306,12 +290,12 @@ async function act(name, body, doneMessage, { reflightRun = false } = {}) {
   finally { busy = false; renderControls(); }
 }
 // Reinspection asks first; in the drone-linked view the reflight becomes a real SITL flight.
+// Every reflight goes to the drone, even before the overview has been opened.
 document.addEventListener('reflight:start', event => {
-  if (mode !== 'live') return;
   event.preventDefault();
   const { targets } = event.detail;
   if (!status?.ready || status.flying) {
-    event.detail.notice = !status?.sitl ? '드론이 꺼져 있습니다. 점검 현황에서 드론을 켠 뒤 다시 시작하세요.' : status.flying ? '다른 비행이 진행 중입니다. 끝난 뒤 다시 시작하세요.' : '드론이 아직 준비 중입니다. 잠시 후 다시 시작하세요.';
+    event.detail.notice = !status ? '드론 서버를 확인하는 중입니다. 잠시 후 다시 시작하세요.' : !status.sitl ? '드론이 꺼져 있습니다. 점검 현황에서 드론을 켠 뒤 다시 시작하세요.' : status.flying ? '다른 비행이 진행 중입니다. 끝난 뒤 다시 시작하세요.' : '드론이 아직 준비 중입니다. 잠시 후 다시 시작하세요.';
     return;
   }
   event.detail.started = true;
