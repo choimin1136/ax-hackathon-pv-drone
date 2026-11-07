@@ -8,7 +8,12 @@ const CAMERA = 230;
 const DRONE_ARM = 4.5;
 const PAD_RADIUS = 8;
 const ROUTE_LANDING_MS = 3000;
-const COLORS = { ground: '#dfe7f2', line: '#ffffff', active: '#f2b632', label: '#ffffff', activeLabel: '#17243b', pad: '#94a3b8', padMark: '#ffffff', trail: '#2563eb', shadow: '#55657d', tether: '#55657d', drone: '#17243b', rotor: '#2563eb', rotorDisc: 'rgba(37, 99, 235, 0.3)', capture: 'rgba(242, 182, 50, 0.4)' };
+const PANEL_GAP = 1.6;
+const PANEL_LOW_M = 2;
+const PANEL_HIGH_M = 6.5;
+const PANEL_THICK_M = 0.7;
+const SHADOW_SLANT = 0.9;
+const COLORS = { ground: '#dfe7f2', field: '#d3dce8', panelShadow: 'rgba(23, 36, 59, 0.16)', post: '#6f7d92', panelEdge: '#3b475b', frame: 'rgba(84, 99, 122, 0.55)', line: '#ffffff', active: '#f2b632', label: '#ffffff', activeLabel: '#17243b', pad: '#94a3b8', padMark: '#ffffff', trail: '#2563eb', shadow: '#55657d', tether: '#55657d', drone: '#17243b', rotor: '#2563eb', rotorDisc: 'rgba(37, 99, 235, 0.3)', capture: 'rgba(242, 182, 50, 0.4)' };
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const cells = plantCells();
 
@@ -42,20 +47,43 @@ export function createScene(canvas, { fillOf, isActive, onCellClick, onRender })
   function circle(cx, cy, cz, radius, fill) {
     polygon(Array.from({ length: 24 }, (_, i) => project(cx + Math.cos(i / 24 * Math.PI * 2) * radius, cy + Math.sin(i / 24 * Math.PI * 2) * radius, cz)), fill);
   }
-  function cellCorners({ x_m: x, y_m: y }) {
-    return [[x - HALF, y - HALF], [x + HALF, y - HALF], [x + HALF, y + HALF], [x - HALF, y + HALF]].map(([a, b]) => project(a, b));
+  // Each cell is one panel table: raised on posts and tilted so its low edge faces the camera side (larger y).
+  function panelPoint(cell, u, v) {
+    const x = cell.x_m - HALF + PANEL_GAP + u * (CELL_M - PANEL_GAP * 2);
+    const y = cell.y_m - HALF + PANEL_GAP + v * (CELL_M - PANEL_GAP * 2);
+    return [x, y, PANEL_HIGH_M + (PANEL_LOW_M - PANEL_HIGH_M) * v];
+  }
+  function cellCorners(cell) {
+    return [[0, 0], [1, 0], [1, 1], [0, 1]].map(([u, v]) => project(...panelPoint(cell, u, v)));
+  }
+  // Far cells first, so nearer panels cover the posts and shadows behind them however the view is turned.
+  function byDepth() {
+    return [...cells].sort((a, b) => project(a.x_m, a.y_m)[2] - project(b.x_m, b.y_m)[2]);
+  }
+  function line(a, b, color, width) {
+    ctx.strokeStyle = color; ctx.lineWidth = width;
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
   }
   function drawCell(cell, state) {
     const { x_m: x, y_m: y, cell_id: id } = cell;
     const active = isActive(id, state);
-    polygon(cellCorners(cell), active ? COLORS.active : fillOf(id, state), COLORS.line, 1);
-    for (let i = 1; i < 4; i += 1) {
-      const yy = y - HALF + i * HALF / 2;
-      const a = project(x - HALF + 1, yy), b = project(x + HALF - 1, yy);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)'; ctx.lineWidth = 0.5;
-      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+    const corners = [[0, 0], [1, 0], [1, 1], [0, 1]].map(([u, v]) => panelPoint(cell, u, v));
+    polygon(corners.map(([px, py, pz]) => project(px + pz * SHADOW_SLANT, py, 0)), COLORS.panelShadow);
+    for (const [px, py, pz] of corners) {
+      const inset = [px + (px < x ? 1 : -1), py + (py < y ? 1 : -1)];
+      line(project(inset[0], inset[1], 0), project(inset[0], inset[1], pz - 0.1), COLORS.post, 1.4);
     }
-    const [lx, ly, scale] = project(x, y);
+    // Side frames from the ground up to the panel edge make the table read as a standing structure.
+    for (const u of [0, 1]) {
+      const [bx, by, bz] = panelPoint(cell, u, 0), [fx, fy, fz] = panelPoint(cell, u, 1);
+      polygon([project(bx, by, 0), project(fx, fy, 0), project(fx, fy, fz - PANEL_THICK_M), project(bx, by, bz - PANEL_THICK_M)], COLORS.frame);
+    }
+    const frontTop = [panelPoint(cell, 0, 1), panelPoint(cell, 1, 1)];
+    polygon([...frontTop.map(p => project(...p)), ...frontTop.reverse().map(([px, py, pz]) => project(px, py, pz - PANEL_THICK_M))], COLORS.panelEdge);
+    polygon(cellCorners(cell), active ? COLORS.active : fillOf(id, state), COLORS.line, 1);
+    for (let i = 1; i < 4; i += 1) line(project(...panelPoint(cell, 0, i / 4)), project(...panelPoint(cell, 1, i / 4)), 'rgba(255, 255, 255, 0.28)', 0.6);
+    for (let i = 1; i < 6; i += 1) line(project(...panelPoint(cell, i / 6, 0)), project(...panelPoint(cell, i / 6, 1)), 'rgba(255, 255, 255, 0.16)', 0.5);
+    const [lx, ly, scale] = project(...panelPoint(cell, 0.5, 0.5));
     ctx.fillStyle = active ? COLORS.activeLabel : COLORS.label;
     ctx.font = `600 ${Math.max(8, scale * 3.4)}px "Pretendard", "Malgun Gothic", sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -115,8 +143,9 @@ export function createScene(canvas, { fillOf, isActive, onCellClick, onRender })
       ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
       ctx.clearRect(0, 0, view.w, view.h);
       polygon([[-48, -18], [118, -18], [118, 78], [-48, 78]].map(([x, y]) => project(x, y)), COLORS.ground);
+      polygon([[-1, -1], [CELL_M * 6 + 1, -1], [CELL_M * 6 + 1, CELL_M * 4 + 1], [-1, CELL_M * 4 + 1]].map(([x, y]) => project(x - HALF, y - HALF)), COLORS.field);
       drawPad();
-      cells.forEach(cell => drawCell(cell, state));
+      byDepth().forEach(cell => drawCell(cell, state));
       drawTrail(state?.phase);
       drawDrone(state?.position, state?.phase);
     }
@@ -150,7 +179,7 @@ export function createScene(canvas, { fillOf, isActive, onCellClick, onRender })
     const box = canvas.getBoundingClientRect();
     const x = clientX - box.left, y = clientY - box.top;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    const hit = cells.find(cell => { tracePolygon(cellCorners(cell)); return ctx.isPointInPath(x, y); });
+    const hit = byDepth().reverse().find(cell => { tracePolygon(cellCorners(cell)); return ctx.isPointInPath(x, y); });
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     return hit;
   }
