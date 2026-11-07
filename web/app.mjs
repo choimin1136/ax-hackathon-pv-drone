@@ -1,3 +1,4 @@
+import { createReport } from './report.mjs';
 import { createValueResults } from './value.mjs';
 import { CELL_IDS, ROUTE, STATUS, createMission, startMission, pauseMission, tickMission, summarize } from './mission.mjs';
 import {createReinspection} from './reinspection.mjs';
@@ -13,6 +14,7 @@ const detail = createDetail({getCell:id=>state.cells.find(c=>c.cell_id===id),onC
 }});
 const reinspection = createReinspection({getCells:()=>state.cells,getSummary:cell=>detail.summary(cell),isMissionComplete:()=>state.phase==='complete',onFlightChange:()=>render()});
 const valueResults = createValueResults({getCells:()=>state.cells});
+createReport({getSnapshot:()=>({mission:state,candidates:state.cells.flatMap(c=>detail.candidates(c)),assumptions:valueResults.assumptions()})});
 const detailButton=document.createElement('button');
 detailButton.type='button';detailButton.className='primary';detailButton.textContent='이미지 · 후보 확인';
 detailButton.onclick=()=>detail.open(selected);

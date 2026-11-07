@@ -64,5 +64,5 @@ export function createValueResults({ getCells }) {
     }
   }
   root.querySelector('[data-value-reset]').onclick = () => { for (const [key,input] of inputs) input.value = DEFAULTS[key]; render(); };
-  return { render };
+  return { render, assumptions: () => Object.fromEntries([...inputs].map(([key,input]) => [key,input.value.trim() === '' ? NaN : Number(input.value)])) };
 }
