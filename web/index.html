@@ -14,7 +14,6 @@
   <script type="module" src="./navigation.mjs"></script>
   <script type="module" src="./sitl.mjs"></script>
   <script type="module" src="./reflight-view.mjs"></script>
-  <script type="module" src="./sim.mjs"></script>
 </head>
 <body>
   <a class="skip" href="#main">본문으로 이동</a>
@@ -27,17 +26,17 @@
     <summary>메뉴 <span aria-hidden="true">☰</span></summary>
     <nav aria-label="대시보드 메뉴">
       <p class="nav-caption">WORKSPACE</p>
-      <a href="#overview" aria-current="location"><span aria-hidden="true">01</span>점검 현황 (현재 상태)</a>
-      <a href="#sim"><span aria-hidden="true">02</span>점검 현황 (드론 시뮬)</a>
-      <a href="#reinspection"><span aria-hidden="true">03</span>재점검 대상</a>
-      <a href="#activity"><span aria-hidden="true">04</span>점검 기록</a>
-      <a href="#value-results"><span aria-hidden="true">05</span>점검 분석</a>
-      <a href="#report"><span aria-hidden="true">06</span>점검 보고서</a>
+      <a href="#overview" aria-current="location"><span aria-hidden="true">01</span>점검 현황(데모)</a>
+      <a href="#overview-live" data-section="#overview"><span aria-hidden="true">01</span>점검 현황(드론 연동)</a>
+      <a href="#reinspection"><span aria-hidden="true">02</span>재점검 대상</a>
+      <a href="#activity"><span aria-hidden="true">03</span>점검 기록</a>
+      <a href="#value-results"><span aria-hidden="true">04</span>점검 분석</a>
+      <a href="#report"><span aria-hidden="true">05</span>점검 보고서</a>
       <p class="nav-note">메뉴별 화면에서<br>점검 결과를 확인하세요.</p>
     </nav>
   </details>
   <main id="main">
-    <section id="overview" aria-label="점검 현황 (현재 상태)">
+    <section id="overview" aria-label="점검 현황">
     <div class="page-heading">
       <div><p class="eyebrow">SOLAR INSPECTION / OVERVIEW</p><h1>태양광 패널 열화상 점검<span class="heading-dot">.</span></h1><p class="intro">구역별 상태를 살펴보고, 점검 미션의 흐름을 체험하세요.</p></div>
       <div class="heading-meta"><span class="demo-chip">가상 발전소 01</span><span>6 × 4 구역 · 예시 데이터</span></div>
@@ -80,7 +79,6 @@
       </aside>
     </div>
     </section>
-    <section id="sim" class="sim-card" aria-label="점검 현황 (드론 시뮬)"></section>
     <section id="reinspection" class="reinspection-card" aria-label="재점검 대상 선택"></section>
     <section id="value-results" class="reinspection-card value-results" aria-label="점검 분석"></section>
     <section id="report" class="reinspection-card" aria-label="점검 보고서"></section>
