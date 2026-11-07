@@ -27,7 +27,6 @@ root.innerHTML = `
     <canvas id="sitl-canvas" role="img" aria-label="이륙장에서 출발해 가상 발전소 위를 비행하는 드론의 3D 화면. 현재 값은 아래 비행 상태에서 확인할 수 있습니다."></canvas>
     <span id="sitl-source" class="sitl-source">기록 불러오는 중</span>
   </div>
-  <p id="sitl-copy" class="sitl-copy"></p>
   <dl class="sitl-facts">
     <div><dt>상태</dt><dd id="sitl-phase">—</dd></div>
     <div><dt>고도</dt><dd id="sitl-alt">—</dd></div>
@@ -49,7 +48,7 @@ hudCard.innerHTML = '<div class="sitl-log-title"><h3>비행 계기</h3><span id=
 document.querySelector('.mission-card').after(hudCard);
 const hud = createHud(hudCard.querySelector('canvas'));
 // Drone values sit together in the right column; the zone summary sits under the map with its legend.
-hudCard.append(root.querySelector('.sitl-facts'), root.querySelector('#sitl-copy'));
+hudCard.append(root.querySelector('.sitl-facts'));
 document.querySelector('.map-card .legend').after(document.querySelector('.overview-summary'));
 
 const openCell = id => [...document.querySelectorAll('#cell-grid .cell')].find(button => button.querySelector('.cell-id')?.textContent === id)?.click();
@@ -333,9 +332,6 @@ async function applyMode(next) {
   scene.stop();
   reflight = null; routeKey = ''; missionKey = ''; liveKey = '';
   clearInterval(pollId);
-  $('sitl-copy').textContent = next === 'live'
-    ? '서버에서 실행 중인 가상 드론(ArduPilot 시뮬레이터)의 실시간 위치와 로그입니다. 셀 색은 예시 판정이며, 실제 기체 비행이 아닙니다.'
-    : '드론 위치·고도·로그는 가상 드론(ArduPilot 시뮬레이터)의 비행 기록이고, 셀 색은 예시 판정입니다. 실제 기체 비행이 아닙니다.';
   document.querySelector('.simulation-note').innerHTML = NOTES[next];
   showFlight(next === 'demo' ? record : null, next === 'demo' ? '드론 비행 기록' : '드론 비행 없음');
   clearFacts();
