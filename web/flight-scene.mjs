@@ -37,7 +37,7 @@ export function createScene(canvas, { fillOf, isActive, onCellClick, onRender })
     const up = ry * Math.sin(view.el) + z * Math.cos(view.el);
     const k = CAMERA / (CAMERA + depth);
     const scale = Math.min(view.w / 205, view.h / 135);
-    return [view.w / 2 + rx * k * scale, view.h * 0.57 - up * k * scale, k * scale];
+    return [view.w / 2 + rx * k * scale, view.h * 0.44 - up * k * scale, k * scale];
   }
   function tracePolygon(points) {
     ctx.beginPath();
