@@ -1,4 +1,5 @@
 import { createReflight, startReflight, pauseReflight, tickReflight } from './reflight.mjs';
+import { formatStarted, recordRecommendations } from './inspection-history-store.mjs';
 import { ROUTE } from './mission.mjs';
 
 // Prototype recommendations, not a flight or maintenance decision.
@@ -14,8 +15,13 @@ export function selectedTargets(cells, selected) {
   return ROUTE.filter(id => selected.has(id) && cells.some(c => c.cell_id === id && c.status !== 'pending'));
 }
 
-export function createReinspection({ getCells, getSummary, isMissionComplete, onFlightChange }) {
+export function createReinspection({ getCells, getSummary, getRecords=()=>[], isMissionBusy=()=>false, isMissionComplete, onFlightChange }) {
   const root = document.getElementById('reinspection');
+  let sourceId='';
+  const sourceRecord=()=>getRecords().find(record=>record.id===sourceId);
+  const sourceCells=()=>sourceRecord()?.cells ?? getCells();
+  const reasonFor=cell=>sourceRecord() ? (recordRecommendations(sourceRecord()).includes(cell.cell_id)?'선택 기록 기준 확인 필요':'') : recommendation(cell,getSummary(cell));
+  const ready=()=>!isMissionBusy() && (isMissionComplete() || Boolean(sourceRecord()?.visited.length));
   const selected = new Set();
   const rows = new Map();
   let confirmed = false;
@@ -36,7 +42,7 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
   }
   root.innerHTML = `<div class="reinspection-picker"><div class="card-heading"><div><p class="eyebrow">NEXT INSPECTION</p><h2>재점검 대상 선택</h2></div><span class="demo-chip">예시 · 시뮬레이션</span></div>
     <p class="reinspection-help">사진 확보 필요, 미확인 후보, 승인한 주의 구역을 추천합니다. 점검이 끝난 구역을 직접 추가하거나 해제할 수 있습니다.</p>
-    <div class="reinspection-actions"><button type="button" data-recommend>추천 대상 선택</button><button type="button" data-clear>전체 해제</button></div>
+    <label class="recommendation-source">추천 기준 기록 <select data-history-source aria-label="추천 기준 기록"><option value="">현재 점검 결과</option></select></label><p class="reinspection-help" data-history-note></p><div class="reinspection-actions"><button type="button" data-recommend>추천 대상 선택</button><button type="button" data-clear>전체 해제</button></div>
     <div class="reinspection-grid" aria-label="재점검 구역 선택"></div>
     <p data-selection></p><button type="button" class="primary" data-confirm>선택 확정 · 예시</button>
     <p data-result role="status"></p>
@@ -71,12 +77,25 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
       onFlightChange();
     };
   }
+  root.querySelector('[data-history-source]').onchange=e=>{
+    if(busy())return;
+    sourceId=e.target.value;selected.clear();confirmed=false;clearFlight();onFlightChange();
+  };
   function render() {
-    const cells = getCells();
+    const select=root.querySelector('[data-history-source]');
+    const records=getRecords().filter(r=>!['running','paused'].includes(r.phase)&&r.visited.length).reverse();
+    const signature=records.map(r=>r.id).join(',');
+    if(select.dataset.records!==signature){
+      select.replaceChildren(new Option('현재 점검 결과',''),...records.map(r=>new Option(formatStarted(r.startedAt)+' · '+(r.kind==='selection'?'재점검':'전체 점검'),r.id)));
+      select.dataset.records=signature;
+    }
+    select.value=sourceId;select.disabled=busy();
+    root.querySelector('[data-history-note]').textContent=sourceRecord()?'선택한 날짜의 방문 완료·후보 확인 기록 기준입니다. 현재 점검 결과는 바뀌지 않습니다.':records.length?'날짜를 고른 뒤 추천 대상 선택을 누르세요.':'저장된 점검 기록이 없습니다. 현재 점검 결과를 사용합니다.';
+    const cells = sourceCells();
     let recommended = 0;
     for (const cell of cells) {
       const row = rows.get(cell.cell_id);
-      const reason = recommendation(cell, getSummary(cell));
+      const reason = reasonFor(cell);
       if (reason) recommended++;
       row.input.disabled = busy() || cell.status === 'pending';
       row.input.checked = selected.has(cell.cell_id);
@@ -123,12 +142,12 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
       : '전체 점검 완료 후 대상을 선택하고 확정하세요.';
     const play = root.querySelector('[data-flight-play]');
     play.textContent = external && flight.phase === 'running' ? '드론 재비행 중' : flight.phase === 'running' ? '재비행 일시정지' : flight.phase === 'paused' ? '재비행 이어서 재생' : flight.phase === 'complete' ? '선택 구역 다시 재비행' : '선택 구역 재비행 시작';
-    play.disabled = !isMissionComplete() || (!busy() && !confirmed) || (external && busy());
+    play.disabled = !ready() || (!busy() && !confirmed) || (external && busy());
     root.querySelector('[data-flight-reset]').disabled = flight.phase === 'idle' || (external && busy());
   }
   root.querySelector('[data-recommend]').onclick = () => {
     selected.clear();
-    for (const cell of getCells()) if (recommendation(cell, getSummary(cell))) selected.add(cell.cell_id);
+    for (const cell of sourceCells()) if (reasonFor(cell)) selected.add(cell.cell_id);
     confirmed = false;
     clearFlight();
     onFlightChange();
@@ -146,7 +165,7 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
     else {
       if (!busy() && !confirmed) return;
       if (external && busy()) return;
-      const targets = flight.phase === 'paused' ? flight.targets : selectedTargets(getCells(), selected);
+      const targets = flight.phase === 'paused' ? flight.targets : selectedTargets(sourceCells(), selected);
       const request = new CustomEvent('reflight:start', { cancelable: true, detail: { targets } });
       document.dispatchEvent(request);
       if (request.defaultPrevented) {
@@ -176,6 +195,6 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
     render,
     flight: () => flight,
     invalidate() { confirmed = false; },
-    reset() { clearFlight(); selected.clear(); confirmed = false; }
+    reset() { clearFlight(); selected.clear(); confirmed = false; sourceId=''; }
   };
 }

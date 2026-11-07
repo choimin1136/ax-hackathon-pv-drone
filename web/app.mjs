@@ -14,7 +14,7 @@ const detail = createDetail({getCell:id=>state.cells.find(c=>c.cell_id===id),onC
   reinspection.invalidate();
   render();
 }});
-const reinspection = createReinspection({getCells:()=>state.cells,getSummary:cell=>detail.summary(cell),isMissionComplete:()=>state.phase==='complete',onFlightChange:()=>render()});
+const reinspection = createReinspection({getCells:()=>state.cells,getSummary:cell=>detail.summary(cell),getRecords:()=>flightHistory.records(),isMissionBusy:()=>['running','paused'].includes(state.phase),isMissionComplete:()=>state.phase==='complete',onFlightChange:()=>render()});
 const flightHistory = createFlightHistory({getCandidates:cell=>detail.candidates(cell)});
 const valueResults = createValueResults({getCells:()=>state.cells});
 createReport({getSnapshot:()=>({mission:state,candidates:state.cells.flatMap(c=>detail.candidates(c)),assumptions:valueResults.assumptions()})});
@@ -84,7 +84,7 @@ function render() {
   if (flight.phase !== 'idle') $('flight-position').textContent = flight.phase === 'complete' ? '선택 구역 재비행 완료 · 예시' : '재비행 · ' + (flight.phase === 'paused' ? '일시정지 · ' : '') + (flight.activeId ? flight.activeId + ' 예시 촬영' : '선택 구역으로 이동 중');
   renderRoute();
   renderReviewStates({cells:state.cells,getCounts:cell=>detail.summary(cell),selected});
-  const displayed=summarizeFlightReview(state.cells,cell=>detail.summary(cell),flight);
+  const displayed=summarizeFlightReview(flight.phase==='idle'?state.cells:reinspection.summaryCells(),cell=>flight.phase==='idle'?detail.summary(cell):reinspection.summaryCounts(cell),flight);
   $('clear-count').textContent=displayed.clear;
   $('review-count').textContent=displayed.review;
   $('retake-count').textContent=displayed.retake;
