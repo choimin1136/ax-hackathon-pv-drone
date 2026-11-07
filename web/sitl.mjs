@@ -2,6 +2,7 @@ import { buildLog, logUntil, routeFlight, targetTime } from './flight.mjs';
 import { createScene, createViewToggle, followRoute } from './flight-scene.mjs';
 import { missionFromFlight } from './mission.mjs';
 import { attitudeAt, createHud } from './hud.mjs';
+import { createThermalCard, makeCollapsible } from './side-cards.mjs';
 
 const PHASES = { waiting: '이륙 대기', takeoff: '이륙', moving: '셀로 이동', capture: '촬영 지점 도착', returning: '복귀', landing: '착륙', done: '비행 종료' };
 const SOURCES = { fc: 'FC', mission: 'MISSION', frame: 'FRAME' };
@@ -50,6 +51,11 @@ const hud = createHud(hudCard.querySelector('canvas'));
 // Drone values sit together in the right column; the zone summary sits under the map with its legend.
 hudCard.append(root.querySelector('.sitl-facts'), root.querySelector('#sitl-copy'));
 document.querySelector('.map-card .legend').after(document.querySelector('.overview-summary'));
+
+const openCell = id => [...document.querySelectorAll('#cell-grid .cell')].find(button => button.querySelector('.cell-id')?.textContent === id)?.click();
+const thermal = createThermalCard({ onOpen: openCell });
+document.querySelector('.mission-card').after(thermal.element);
+for (const [card, name] of [[thermal.element, 'thermal'], [hudCard, 'hud'], [logCard, 'log']]) makeCollapsible(card, card.querySelector('.sitl-log-title'), name);
 
 const controls = document.createElement('div');
 controls.id = 'live-controls';
@@ -125,11 +131,12 @@ const scene = createScene($('sitl-canvas'), {
     return CELL_COLORS[mission?.cells.find(cell => cell.cell_id === id)?.status] ?? CELL_COLORS.pending;
   },
   isActive: (id, state) => (reflightLive ? state?.current : reflight ? reflight.activeId : mission?.activeId) === id,
-  onCellClick: id => [...document.querySelectorAll('#cell-grid .cell')].find(button => button.querySelector('.cell-id')?.textContent === id)?.click(),
+  onCellClick: openCell,
   onRender(state, t) {
     renderFacts(state, t); renderLog(t); syncLiveMission(state, t); syncReflight(state, t);
     const attitude = attitudeAt(flight, t);
     $('hud-source').textContent = attitude?.measured ? '자세: 드론 비행 제어기 값' : '자세: 위치 기록으로 계산한 근사값';
+    thermal.show(mission?.cells.find(cell => cell.cell_id === state.last_cell));
     hud.draw({ attitude, phase: PHASES[state.phase], armed: !['waiting', 'done'].includes(state.phase), time: clock(t * flightSpeed()) });
     if (reflightLive && flight && flight !== record) document.dispatchEvent(new CustomEvent('sitl:flight', { detail: { flight, t } }));
   }
@@ -139,7 +146,7 @@ function showFlight(next, source) {
   flight = next;
   entries = next ? buildLog(next) : [];
   scene.setFlight(next);
-  if (!next) { hud.draw(null); $('hud-source').textContent = ''; }
+  if (!next) { hud.draw(null); thermal.show(null); $('hud-source').textContent = ''; }
   shown = -1;
   $('sitl-log').replaceChildren();
   $('sitl-log-count').textContent = next ? '' : '0 / 0';
