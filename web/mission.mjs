@@ -56,3 +56,21 @@ export function missionFromFlight(visited, activeId, finished, flying, elapsed =
 export function summarize(state) {
   return { completed: state.index, clear: state.cells.filter(c => c.status === 'no_candidate').length, review: state.cells.filter(c => c.status === 'caution' || c.status === 'check').length, retake: state.cells.filter(c => c.status === 'retake').length };
 }
+
+// Partial reflight updates must not erase results from the current full inspection.
+// A new full inspection explicitly resets state before receiving flight updates.
+export function mergeFlightProgress(previous, incoming) {
+  const oldCells = new Map(previous.cells.map(cell => [cell.cell_id, cell]));
+  const cells = incoming.cells.map(cell => {
+    const old = oldCells.get(cell.cell_id);
+    return cell.status === 'pending' && old?.status !== 'pending' && old
+      ? { ...old }
+      : { ...cell, confirmed_count: old?.confirmed_count ?? cell.confirmed_count };
+  });
+  const events = new Map(previous.events.map(event => [event.cell_id, event]));
+  for (const event of incoming.events) events.set(event.cell_id, event);
+  const index = cells.filter(cell => cell.status !== 'pending').length;
+  const complete = index === CELL_IDS.length;
+  return { ...incoming, cells, events: [...events.values()].sort((a,b)=>b.elapsed-a.elapsed),
+    index, phase: complete ? 'complete' : incoming.phase, activeId: complete ? null : incoming.activeId };
+}

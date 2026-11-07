@@ -1,7 +1,7 @@
 import { renderReviewStates } from './cell-review-status.mjs';
 import { createReport } from './report.mjs';
 import { createValueResults } from './value.mjs';
-import { CELL_IDS, ROUTE, STATUS, createMission, startMission, pauseMission, tickMission, summarize } from './mission.mjs';
+import { CELL_IDS, ROUTE, STATUS, createMission, startMission, pauseMission, tickMission, summarize, mergeFlightProgress } from './mission.mjs';
 import {createReinspection} from './reinspection.mjs';
 import {createDetail} from './detail.mjs';
 const $ = id => document.getElementById(id);
@@ -127,8 +127,7 @@ document.addEventListener('mission:set', event => {
   clearInterval(timer);
   if (event.detail.reset) { detail.reset(); reinspection.reset(); state = createMission(); selected = 'A-1'; }
   else {
-    const reviewed = new Map(state.cells.map(cell => [cell.cell_id, cell.confirmed_count]));
-    state = {...event.detail.mission, cells: event.detail.mission.cells.map(cell => ({...cell, confirmed_count: reviewed.get(cell.cell_id) ?? 0}))};
+    state = mergeFlightProgress(state, event.detail.mission);
   }
   render();
 });
