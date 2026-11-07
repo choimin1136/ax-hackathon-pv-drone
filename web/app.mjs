@@ -105,7 +105,7 @@ function schedule() {
     render();
     if (state.phase === 'complete') {
       clearInterval(timer);
-      $('announcement').textContent = '예시 미션이 완료되었습니다. 24개 구역 중 확인 필요 7개, 재촬영 필요 1개입니다.';
+      $('announcement').textContent = '예시 미션이 완료되었습니다. 24개 구역 중 핫스팟 탐지 8개입니다.';
     }
   }, 1000 / Number($('speed').value));
 }

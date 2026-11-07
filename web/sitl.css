@@ -74,3 +74,13 @@
 }
 .hud-card {min-width:0;padding:16px 20px;border:1px solid var(--line);border-radius:16px;background:#fff;}
 .hud-card canvas {display:block;width:100%;aspect-ratio:4/3;border-radius:10px;background:#0a1424;}
+#overview .map-help,#overview #human-review-summary,#overview .simulation-note {display:none;}
+.hud-card .sitl-facts {grid-template-columns:repeat(2,minmax(0,1fr));margin:12px 0 0;}
+.hud-card .sitl-copy {margin:10px 2px 0;}
+#overview .map-card .overview-summary {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;gap:0;margin:4px 18px 18px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;}
+#overview .map-card .overview-summary .metric {padding:12px 16px;}
+#overview .map-card .overview-summary .metric+.metric {border-top:0;border-left:1px solid var(--line);}
+@media(max-width:520px) {#overview .map-card .overview-summary {grid-template-columns:1fr;margin-inline:8px;}#overview .map-card .overview-summary .metric+.metric {border-left:0;border-top:1px solid var(--line);}}
+/* The model reports only 0 (no hotspot) or 3 (hotspot), so the retake count is not shown. */
+#overview .overview-summary .metric:has(#retake-count) {display:none;}
+@media(min-width:521px) {#overview .map-card .overview-summary {grid-template-columns:repeat(2,minmax(0,1fr));}}

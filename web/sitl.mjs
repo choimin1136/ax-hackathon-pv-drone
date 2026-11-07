@@ -45,15 +45,17 @@ const hudCard = document.createElement('section');
 hudCard.className = 'hud-card';
 hudCard.setAttribute('aria-label', '드론 비행 계기');
 hudCard.innerHTML = '<div class="sitl-log-title"><h3>비행 계기</h3><span id="hud-source"></span></div><canvas role="img" aria-label="드론의 자세, 방위, 속도, 고도를 보여 주는 비행 계기. 같은 값은 아래 비행 상태에서도 확인할 수 있습니다."></canvas>';
-document.querySelector('.side-column').prepend(hudCard);
+document.querySelector('.mission-card').after(hudCard);
 const hud = createHud(hudCard.querySelector('canvas'));
+// Drone values sit together in the right column; the zone summary sits under the map with its legend.
+hudCard.append(root.querySelector('.sitl-facts'), root.querySelector('#sitl-copy'));
+document.querySelector('.map-card .legend').after(document.querySelector('.overview-summary'));
 
 const controls = document.createElement('div');
 controls.id = 'live-controls';
 controls.className = 'live-controls';
 controls.innerHTML = `
   <div class="live-status" role="status"><span id="live-pill" class="sim-pill" data-state="off">확인 중</span></div>
-  <label>비행 범위<select id="live-cells"><option value="">전체 24셀</option><option value="C-4,C-5,C-6">재점검 3셀 (C-4, C-5, C-6)</option></select></label>
   <div class="live-buttons"><button id="live-power" type="button" disabled>드론 켜기</button><button id="live-fly" class="primary" type="button" disabled>▶ 비행 시작</button></div>
   <p id="live-message" class="sim-message" role="status"></p>`;
 document.getElementById('play').before(controls);
@@ -211,7 +213,6 @@ function renderControls() {
   power.disabled = busy;
   fly.disabled = busy || !status.ready;
   fly.textContent = status.flying ? '비행 중' : '▶ 비행 시작';
-  $('live-cells').disabled = status.flying;
 }
 function setMessage(text, isError = false) {
   $('live-message').textContent = text;
@@ -314,7 +315,7 @@ $('live-power').addEventListener('click', () => {
 });
 $('live-fly').addEventListener('click', () => {
   if (status?.flying) { setMessage('⚠ 이미 비행 중입니다. 끝날 때까지 기다려 주세요. 새 비행은 시작하지 않았습니다.', true); return; }
-  act('fly', { cells: $('live-cells').value || null }, '비행을 시작했습니다. 위 단계 표시로 진행을 확인하세요.');
+  act('fly', null, '비행을 시작했습니다. 위 단계 표시로 진행을 확인하세요.');
 });
 
 async function applyMode(next) {
