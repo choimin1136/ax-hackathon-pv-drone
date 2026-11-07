@@ -14,7 +14,7 @@ const detail = createDetail({getCell:id=>state.cells.find(c=>c.cell_id===id),onC
   reinspection.invalidate();
   render();
 }});
-const reinspection = createReinspection({getCells:()=>state.cells,getSummary:cell=>detail.summary(cell),getRecords:()=>flightHistory.records(),isMissionBusy:()=>['running','paused'].includes(state.phase),isMissionComplete:()=>state.phase==='complete',onFlightChange:()=>render()});
+const reinspection = createReinspection({getCells:()=>state.cells,getSummary:cell=>detail.summary(cell),getRecords:()=>flightHistory.records(),isMissionBusy:()=>['running','paused'].includes(state.phase),onFlightChange:()=>render()});
 const flightHistory = createFlightHistory({getCandidates:cell=>detail.candidates(cell)});
 const valueResults = createValueResults({getCells:()=>state.cells});
 createReport({getSnapshot:()=>({mission:state,candidates:state.cells.flatMap(c=>detail.candidates(c)),assumptions:valueResults.assumptions()})});
@@ -78,8 +78,8 @@ function render() {
   document.querySelector('.detail-foot').textContent='합성 이미지와 후보 확인 · 저장은 현재 미션에만 적용';
   detail.refresh();
   valueResults.render();
+  flightHistory.observe(state,reinspection.flight(),reinspection.referenceCells());
   reinspection.render();
-  flightHistory.observe(state,reinspection.flight());
   const flight = reinspection.flight();
   if (flight.phase !== 'idle') $('flight-position').textContent = flight.phase === 'complete' ? '선택 구역 재비행 완료 · 예시' : '재비행 · ' + (flight.phase === 'paused' ? '일시정지 · ' : '') + (flight.activeId ? flight.activeId + ' 예시 촬영' : '선택 구역으로 이동 중');
   renderRoute();

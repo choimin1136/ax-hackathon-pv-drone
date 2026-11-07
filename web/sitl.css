@@ -54,8 +54,8 @@
 .live-controls .primary {width:100%;margin:0;}
 .sim-message {min-height:18px;margin:0;font-size:12px;line-height:1.5;color:var(--muted);}
 .sim-message.error {color:#c63038;}
-#overview .side-column {display:flex;flex-direction:column;height:auto;align-self:start;}
-#overview .side-column>* {flex:none;}
+#overview .side-column {display:flex;flex-direction:column;align-items:stretch;min-width:0;width:100%;height:auto;align-self:start;}
+#overview .side-column>* {flex:none;min-width:0;width:100%;box-sizing:border-box;}
 #overview .mission-card {height:auto;max-height:none;min-height:0;overflow:visible;}
 .live-buttons {display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 /* The heading is hidden so the map starts at the top and stays in view while the right column scrolls. */
@@ -106,3 +106,18 @@
 .thermal-card.has-image .thermal-empty {display:none;}
 .thermal-caption {min-height:18px;margin:8px 2px 0;font-size:12px;color:var(--muted);}
 .thermal-caption[data-status="check"] {color:#c63038;font-weight:600;}
+
+/* Stack the overview before its map and controls become too narrow. */
+@media(max-width:1250px) {
+  #main>#overview .workspace {grid-template-columns:minmax(0,1fr);height:auto;max-height:none;overflow:visible;}
+  #main>#overview {height:auto;max-height:none;overflow:visible;}
+  #overview .map-card {position:static;height:auto;min-height:0;}
+  #overview #sitl>.sitl-stage {flex:none;height:clamp(280px,45vw,430px);}
+}
+@media(max-width:520px) {
+  #overview .side-column>* {padding-inline:16px;}
+  .live-buttons {grid-template-columns:minmax(0,1fr);}
+  .sitl-log li {grid-template-columns:auto minmax(0,1fr);column-gap:8px;}
+  .sitl-log li>span:last-child {grid-column:1/-1;}
+  .sitl-facts dt,.sitl-facts dd {white-space:normal;overflow-wrap:anywhere;}
+}
