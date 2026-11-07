@@ -97,6 +97,8 @@
 .thermal-card {min-width:0;padding:16px 20px;border:1px solid var(--line);border-radius:16px;background:#fff;}
 .thermal-frame {position:relative;display:block;width:100%;aspect-ratio:640/512;padding:0;overflow:hidden;border:0;border-radius:10px;background:#1c1830;cursor:pointer;}
 .thermal-frame:disabled {cursor:default;}
+/* The photo box keeps the camera's 640×512 shape, the same as the cell detail view. */
+.thermal-shot {position:absolute;inset:0;overflow:hidden;border-radius:10px;}
 .thermal-frame img {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
 .thermal-frame img:not([src]) {display:none;}
 .thermal-frame [data-mask] {opacity:.75;}
@@ -142,7 +144,8 @@
   #overview .overview-primary-cards>.thermal-card {display:flex;flex-direction:column;min-height:0;padding:20px;}
   #overview .thermal-card .collapse-head {margin-bottom:12px;align-items:center;}
   #overview .thermal-card .collapse-head,#overview .thermal-caption {flex:none;}
-  #overview .thermal-frame {flex:1;min-height:0;aspect-ratio:auto;}
-  #overview .thermal-frame img {object-fit:contain;}
+  /* The frame takes the card's spare height; the photo box is the largest 5:4 box that fits inside it. */
+  #overview .thermal-frame {flex:1;min-height:0;aspect-ratio:auto;container-type:size;display:grid;place-items:center;background:transparent;}
+  #overview .thermal-shot {position:relative;inset:auto;width:min(100cqw,125cqh);aspect-ratio:640/512;background:#1c1830;}
   #overview .overview-primary-cards:has(.thermal-card[data-collapsed="true"]) {height:auto;grid-template-rows:auto auto;}
 }
