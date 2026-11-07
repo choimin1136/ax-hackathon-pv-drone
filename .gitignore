@@ -18,3 +18,4 @@ node_modules/
 
 # SITL flight started from the web page
 drone/sample_flight/live.jsonl
+drone/sample_flight/inspection-history.json*

@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createSitlControl } from './sitl-control.mjs';
+import { createInspectionHistory } from './inspection-history.mjs';
 
 const DEFAULT_WEB = fileURLToPath(new URL('../web/', import.meta.url));
 const DEFAULT_FLIGHTS = fileURLToPath(new URL('../drone/sample_flight/', import.meta.url));
@@ -52,11 +53,13 @@ function sendJson(res, status, body, head) {
   res.end(head ? undefined : JSON.stringify(body));
 }
 
-export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, basePath = '', sitlEnv = process.env, sitlHooks = {}, sitlArgsForTest } = {}) {
+export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, historyFile = path.join(flightDir,'inspection-history.json'), basePath = '', sitlEnv = process.env, sitlHooks = {}, sitlArgsForTest } = {}) {
   const base = basePath.replace(/\/+$/, '');
   const sitl = createSitlControl({ flightDir, env: sitlEnv, sitlArgs: sitlArgsForTest, ...sitlHooks });
+  const history = createInspectionHistory({file:historyFile,flightDir});
+  const poll=setInterval(()=>history.list().catch(error=>console.error('History persistence failed:',error.message)),1000);poll.unref();
   const actions = { start: () => sitl.start(), stop: () => sitl.stop(), fly: body => sitl.fly(body.cells ?? null) };
-  return http.createServer(async (req, res) => {
+  const app = http.createServer(async (req, res) => {
     const head = req.method === 'HEAD';
     let pathname;
     try { pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname); }
@@ -66,11 +69,20 @@ export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, 
     if (base && pathname === base) { res.writeHead(301, { Location: `${base}/` }); res.end(); return; }
     if (base && pathname.startsWith(`${base}/`)) pathname = pathname.slice(base.length);
 
+    if(pathname==='/api/inspection-history'){
+      try {
+        if(req.method==='GET'||head)return sendJson(res,200,{records:await history.list()},head);
+        if(req.method==='PATCH') {const b=await readJson(req);return sendJson(res,200,{records:await history.review(b.id,b.cellId,b.candidateId,b.decision)});}
+        return sendJson(res,405,{error:'method not allowed'});
+      } catch(error){return sendJson(res,error.status??500,{error:error.status?error.message:'history storage unavailable'});}
+    }
+
     const control = pathname.match(/^\/api\/sitl\/([a-z]+)$/);
     if (control && req.method === 'POST') {
       const action = actions[control[1]];
       if (!action) return sendJson(res, 404, { error: 'not found' });
       try {
+        if(control[1]==='fly')await history.list(); // Persist the previous live file before SITL replaces it.
         const result = await action(await readJson(req));
         return sendJson(res, result.status ?? 200, result);
       } catch { return sendJson(res, 400, { error: 'bad request' }); }
@@ -106,12 +118,14 @@ export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, 
       res.end(head ? undefined : content);
     } catch { res.writeHead(404); res.end('Not found'); }
   });
+  app.on('close',()=>clearInterval(poll));
+  return app;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT ?? 5173);
   const host = process.env.HOST ?? '127.0.0.1';
-  const app = createApp({ flightDir: process.env.FLIGHT_DIR ? path.resolve(process.env.FLIGHT_DIR) : DEFAULT_FLIGHTS, basePath: process.env.BASE_PATH ?? '' });
+  const app = createApp({ flightDir: process.env.FLIGHT_DIR ? path.resolve(process.env.FLIGHT_DIR) : DEFAULT_FLIGHTS, ...(process.env.HISTORY_FILE ? {historyFile:path.resolve(process.env.HISTORY_FILE)} : {}), basePath: process.env.BASE_PATH ?? '' });
   app.on('error', error => { console.error(`Server failed: ${error.message}`); process.exitCode = 1; });
   app.listen(port, host, () => console.log(`Server: http://${host}:${port}`));
 }

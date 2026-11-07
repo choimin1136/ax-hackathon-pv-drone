@@ -1,15 +1,14 @@
 import {cellReviewStatus} from './cell-review-status.mjs';
 import {STATUS,ROUTE} from './mission.mjs';
 import {createDetail} from './detail.mjs';
-import {createHistoryStore,snapshotCells,formatStarted} from './inspection-history-store.mjs';
-import {createFlightRecorder} from './flight-recorder.mjs';
+import {formatStarted} from './inspection-history-store.mjs';
+import {createServerHistoryStore} from './server-history-store.mjs';
 export function createFlightHistory({getCandidates}) {
-  let storage;try {storage=localStorage;}catch{storage={getItem(){throw Error();},setItem(){throw Error();}};}
-  const store=createHistoryStore(storage),record=createFlightRecorder(store);
+  const store=createServerHistoryStore(()=>{renderList();if(activeId){showMap(activeId);detail.loadReviews(current()?.cells.flatMap(c=>c.candidates)??[]);detail.refresh(true);}document.dispatchEvent(new CustomEvent('inspection-history:review'));});
   const root=document.getElementById('activity'),list=document.getElementById('events'),columns=root.querySelector('.event-columns');
-  columns.innerHTML='<span>비행 시작 · 한국 시간</span><span>종류</span><span>점검 결과</span>';
+  columns.innerHTML='<span>기록 시각 · 한국 시간</span><span>종류</span><span>점검 결과</span>';
   root.classList.add('flight-history');list.setAttribute('aria-label','비행별 점검 기록, 최신순');
-  const note=document.createElement('p');note.className='flight-history-note';note.textContent='이 브라우저에 저장 · 날짜를 누르면 당시 2D 지도와 상세를 확인합니다.';root.append(note);
+  const note=document.createElement('p');note.className='flight-history-note';note.textContent='서버 기록을 불러오는 중입니다.';root.append(note);
   const panel=document.createElement('div');panel.className='flight-history-map';panel.hidden=true;
   panel.innerHTML='<div class="card-heading"><button type="button" data-back>← 점검 기록</button><span data-date></span></div>';
   const surface=document.querySelector('#overview .map-surface').cloneNode(true);
@@ -19,11 +18,12 @@ export function createFlightHistory({getCandidates}) {
   surface.querySelector('.map-caption span span').textContent='저장된 점검 결과 · 예시';
   surface.querySelector('.map-bottom>span').textContent='비행 당시 구역 상태 · 합성 판정/이미지';
   panel.append(surface);root.insertBefore(panel,note);
-  let activeId=null,signature='';
+  let activeId=null;
   const current=()=>store.list().find(r=>r.id===activeId);
-  const detail=createDetail({titleId:'history-review-title',archive:true,getCell:id=>current()?.cells.find(c=>c.cell_id===id),onChange:id=>{
+  const detail=createDetail({titleId:'history-review-title',archive:true,canReview:()=>!store.saving()&&!['running','paused'].includes(current()?.phase),getCell:id=>current()?.cells.find(c=>c.cell_id===id),onChange:id=>{
     const cell=current()?.cells.find(c=>c.cell_id===id);if(!cell)return;
     store.review(activeId,id,detail.candidates(cell));renderList();showMap(activeId);
+    document.dispatchEvent(new CustomEvent('inspection-history:review'));
   }});
   function drawRoute(){
     const grid=surface.querySelector('.cell-grid'),base=grid.getBoundingClientRect();
@@ -37,7 +37,7 @@ export function createFlightHistory({getCandidates}) {
     activeId=id;const saved=current();if(!saved)return;
     surface.querySelector('.map-bottom>span').textContent=saved.kind==='selection'?'이번 비행에서 방문 완료한 구역만 표시 · 새 분석이 아닌 합성 예시':'비행 당시 구역 상태 · 합성 판정/이미지';
     list.hidden=true;columns.hidden=true;panel.hidden=false;
-    panel.querySelector('[data-date]').textContent=formatStarted(saved.startedAt)+' · '+phaseLabel(saved.phase);
+    panel.querySelector('[data-date]').textContent=formatStarted(saved.startedAt)+' · '+phaseLabel(saved.phase)+' · 서버 파일 생성 시각';
     const grid=surface.querySelector('.cell-grid');grid.replaceChildren();
     for(const cell of saved.cells){
       const button=document.createElement('button');button.type='button';const counts={approved:0,excluded:0,pending:0};for(const c of cell.candidates)counts[c.decision]++;const review=cellReviewStatus(cell,counts);
@@ -58,16 +58,14 @@ export function createFlightHistory({getCandidates}) {
     for(const r of records.reverse()){
       const li=document.createElement('li'),button=document.createElement('button');button.type='button';button.className='flight-history-row';
       const time=document.createElement('time');time.dateTime=r.startedAt;time.textContent=formatStarted(r.startedAt);
-      const type=document.createElement('span');type.textContent=r.kind==='selection'?'재점검':'전체 점검';
+      const type=document.createElement('span');type.textContent=r.kind==='selection'?'선택 점검':'전체 점검';
       const result=document.createElement('span');result.textContent=`${phaseLabel(r.phase)} · ${r.visited.length}/${r.targets.length}구역 · 2D 지도 보기`;
       button.append(time,type,result);button.onclick=()=>showMap(r.id);li.append(button);list.append(li);
     }
-    note.textContent=store.error()||'이 브라우저에 저장 · 비행 시작 관측 시각(한국 시간) · 합성 판정/이미지';
+    note.textContent=store.error()||'서버 공용 기록 · 파일 생성 시각(한국 시간) · 합성 판정/이미지 · 셀을 눌러 승인·제외';
   }
   renderList();
-  return {records:()=>store.list(),observe(state,flight,referenceCells){
-    const cells=snapshotCells(state.cells,getCandidates),key=JSON.stringify([state.phase,state.index,flight.phase,flight.index,cells]);
-    if(signature===key)return;signature=key;
-    if(record(state,flight,cells,document.getElementById('overview').dataset.mode??'demo',referenceCells))renderList();
-  }};
+  store.refresh();setInterval(()=>store.refresh(),5000);
+  document.addEventListener('dashboard:viewchange',()=>store.refresh());
+  return {records:()=>store.list(),observe(){}};
 }

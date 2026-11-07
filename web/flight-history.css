@@ -18,3 +18,25 @@
 .recommendation-source{display:flex;align-items:center;gap:12px;font-size:13px;color:#52617a;margin:12px 0 6px}
 .recommendation-source select{flex:1;min-width:0;max-width:100%;padding:9px 12px;border:1px solid #dce2ec;border-radius:8px;background:#fff;color:#334155;font:inherit}
 #reinspection [data-history-note]{font-size:12px;margin:0 0 12px}
+
+/* Fit the archived 2D map to the history card instead of nesting a scroll area. */
+@media(min-width:700px) and (min-height:650px){
+  .flight-history-map{display:flex;flex-direction:column;overflow:visible;}
+  .flight-history-map .card-heading{flex:none;margin-bottom:8px;padding:0;gap:12px;}
+  .flight-history-map .map-surface{display:flex!important;flex-direction:column;flex:1;min-height:0;padding:12px;margin:0;}
+  .flight-history-map .map-caption{margin-bottom:8px;}
+  .flight-history-map .map-body,.flight-history-map .grid-stage{flex:1;min-height:0;}
+  .flight-history-map .cell-grid{height:100%;grid-template-rows:repeat(4,minmax(0,1fr));gap:8px;}
+  .flight-history-map .cell{height:100%;min-height:0;padding:4px;gap:3px;}
+  .flight-history-map .cell-symbol{font-size:18px;width:28px;height:28px;}
+  .flight-history-map .map-bottom{margin-top:8px;padding-top:8px;}
+  #activity:has(.flight-history-map:not([hidden])) .activity-heading{margin-bottom:10px;}
+  .flight-history-note{flex:none;}
+}
+.energy-comparison{margin:20px 0;padding:18px;border:1px solid var(--line);border-radius:12px;}
+.energy-comparison h3{margin-top:0;}
+.energy-table{overflow-x:auto;margin-top:12px;}
+.energy-table table{border-collapse:collapse;width:100%;font-size:13px;}
+.energy-table th,.energy-table td{padding:10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;}
+.energy-table th:first-child,.energy-table td:first-child{text-align:left;}
+.energy-table caption{text-align:left;color:var(--muted);padding:8px 0;}
