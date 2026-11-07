@@ -9,6 +9,7 @@
 - **데모:** `<배포 URL>`
 - **발표자료:** `<링크>`
 - **기획 문서:** [system-scenario-plan.md](system-scenario-plan.md)
+- **협업 규칙:** [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 해결하려는 문제
 
