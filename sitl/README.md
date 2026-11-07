@@ -1,6 +1,6 @@
 # ArduPilot SITL 안내
 
-Solar Loop의 드론은 실제 기체 대신 **ArduPilot SITL**(Software In The Loop)로 비행합니다. SITL은 실제 드론 비행 제어기에 올라가는 ArduCopter 펌웨어를 서버에서 그대로 실행하는 시뮬레이터입니다. 그래서 미션 업로드, 이륙, 웨이포인트 비행, 착륙을 실제 기체와 같은 MAVLink 명령으로 다룹니다.
+SunPatch의 드론은 실제 기체 대신 **ArduPilot SITL**(Software In The Loop)로 비행합니다. SITL은 실제 드론 비행 제어기에 올라가는 ArduCopter 펌웨어를 서버에서 그대로 실행하는 시뮬레이터입니다. 그래서 미션 업로드, 이륙, 웨이포인트 비행, 착륙을 실제 기체와 같은 MAVLink 명령으로 다룹니다.
 
 이 문서는 팀 서버(`/data/hackathon`)를 기준으로 설치, 실행, 웹 연동, 설정값을 정리합니다. 설정값 예시는 [sitl.env.example](sitl.env.example)에 있습니다.
 

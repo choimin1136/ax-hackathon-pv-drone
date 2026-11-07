@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 64" role="img" aria-label="SunPatch">
+  <title>SunPatch</title>
+  <rect width="64" height="64" rx="16" fill="#2563eb"/>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="45" cy="17" r="6" stroke-width="3.4"/>
+    <path d="M45 5v2.5M45 26.5V29M33 17h2.5M54.5 17H57M36.5 8.5l1.8 1.8M51.7 23.7l1.8 1.8M36.5 25.5l1.8-1.8M51.7 10.3l1.8-1.8" stroke-width="3"/>
+    <path d="M10 53 16 36h26l-6 17Z" stroke-width="3.4"/>
+    <path d="M13 44.5h26M24.7 36l-6 17M33.3 36l-6 17" stroke-width="2.4"/>
+  </g>
+  <path d="M22.9 45.8h6.4l-2.8 6H20.1Z" fill="#fbbf24"/>
+  <text x="82" y="43" font-family="Pretendard, 'Apple SD Gothic Neo', 'Segoe UI', sans-serif" font-size="34" fill="#17243b"><tspan font-weight="800">Sun</tspan><tspan font-weight="400" fill="#4c607c">Patch</tspan></text>
+</svg>
