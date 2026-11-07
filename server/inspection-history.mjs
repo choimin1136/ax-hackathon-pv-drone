@@ -3,6 +3,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {CELL_IDS,missionFromFlight} from '../web/mission.mjs';
 import {candidatesFor} from '../web/review.mjs';
+import {dummyEnergy} from '../web/energy-dummy.mjs';
 
 // One server process owns this file. Writes are serialized and atomically replaced.
 export function createInspectionHistory({file,flightDir}) {
@@ -30,7 +31,9 @@ export function createInspectionHistory({file,flightDir}) {
         const candidates=candidatesFor(c).map(p=>({...p,decision:previous?.candidates.find(old=>old.id===p.id)?.decision??'pending'}));
         return {...c,candidates,confirmed_count:candidates.filter(p=>p.decision==='approved').length};
       });
-      const record={id,sourceFile:name,startedAt:info.birthtime.toISOString(),endedAt:end?info.mtime.toISOString():null,timeBasis:'server-file-created',kind:targets.length===24?'full':'selection',source:'server-flight',targets,visited,phase,cells};
+      const record={id,sourceFile:name,startedAt:info.birthtime.toISOString(),endedAt:end?info.mtime.toISOString():null,timeBasis:'server-file-created',kind:targets.length===24?'full':'selection',source:'server-flight',targets,visited,phase,cells,
+        // Made-up daily power figures saved with the record so every inspection has a comparison to show.
+        energy:dummyEnergy({startedAt:info.birthtime.toISOString(),visited})};
       if(existing)Object.assign(existing,record);else records.push(record);changed=true;
     }
     if(changed)await save(records);return records;

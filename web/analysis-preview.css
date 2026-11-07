@@ -1,12 +1,12 @@
-/* 고도화 미리보기: planned-feature cards under the inspection analysis. */
-.analysis-preview {margin-top:28px;padding-top:22px;border-top:1px dashed #d4dce8;}
+/* 점검 인사이트: cards above the power comparison on the inspection analysis page. */
+.analysis-preview {margin:20px 0 24px;}
 .analysis-preview-head {display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin-bottom:14px;}
 .analysis-preview-head h3 {margin:0;font-size:17px;}
 .analysis-preview-head p {margin:0;font-size:12px;color:#64748b;}
 .analysis-preview-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
 .preview-card {display:flex;flex-direction:column;gap:10px;min-width:0;padding:16px 18px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;}
 .preview-card h4 {margin:0;font-size:15px;color:#17243b;}
-.preview-chip {align-self:flex-start;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;color:#8a5a00;background:#fff4d6;}
+.preview-chip {align-self:flex-start;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;color:#245bc2;background:#edf3ff;}
 .preview-note,.preview-meta {margin:0;font-size:11px;line-height:1.5;color:#64748b;}
 .preview-note {margin-top:auto;}
 .preview-empty {margin:0;padding:14px 0;font-size:12px;color:#64748b;}
