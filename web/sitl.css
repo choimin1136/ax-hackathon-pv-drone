@@ -120,4 +120,8 @@
   .sitl-log li {grid-template-columns:auto minmax(0,1fr);column-gap:8px;}
   .sitl-log li>span:last-child {grid-column:1/-1;}
   .sitl-facts dt,.sitl-facts dd {white-space:normal;overflow-wrap:anywhere;}
-}
+}/* In the drone-linked view the drone status replaces the mission phase pill in the card heading. */
+#overview[data-mode="live"] .mission-card #phase-pill {display:none;}
+#overview:not([data-mode="live"]) .mission-card .live-status {display:none;}
+.mission-card .card-heading .live-status {flex:none;margin-left:auto;}
+.mission-card .card-heading .sim-pill {white-space:nowrap;}

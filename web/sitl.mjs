@@ -66,6 +66,8 @@ controls.innerHTML = `
   <div class="live-buttons"><button id="live-power" type="button" disabled>드론 켜기</button><button id="live-fly" class="primary" type="button" disabled>▶ 비행 시작</button></div>
   <p id="live-message" class="sim-message" role="status"></p>`;
 document.getElementById('play').before(controls);
+// The drone status takes the card's top-right spot, where the demo showed its mission phase.
+document.getElementById('phase-pill').after(controls.querySelector('.live-status'));
 
 const $ = id => document.getElementById(id);
 const card = document.querySelector('.map-card');
@@ -223,7 +225,7 @@ function renderControls() {
   const waiting = status.flying && STAGES[status.stage] && !flight?.frames.length;
   pill.dataset.state = status.flying ? 'flying' : status.ready ? 'on' : status.sitl ? 'busy' : 'off';
   if (waiting) { pill.textContent = `${STAGES[status.stage]} · ${seconds}초`; pill.dataset.state = 'busy'; }
-  else if (status.flying) pill.textContent = `● 비행 중 · ${status.speedup}배속`;
+  else if (status.flying) pill.textContent = `● ${reflightLive ? '재비행' : '비행'} 중 · ${status.speedup}배속`;
   else if (starting) pill.textContent = `드론 켜는 중 · ${seconds}초`;
   else pill.textContent = status.sitl ? `드론 준비됨 · ${status.speedup}배속` : '드론 꺼짐';
   const confirming = status.sitl && Date.now() < confirmOffUntil;
