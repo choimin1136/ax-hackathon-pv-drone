@@ -16,7 +16,7 @@ const detail = createDetail({getCell:id=>state.cells.find(c=>c.cell_id===id),onC
 }});
 const reinspection = createReinspection({getCells:()=>state.cells,getSummary:cell=>detail.summary(cell),getRecords:()=>flightHistory.records(),isMissionBusy:()=>['running','paused'].includes(state.phase),onFlightChange:()=>render()});
 const flightHistory = createFlightHistory({getCandidates:cell=>detail.candidates(cell)});
-const valueResults = createValueResults({getCells:()=>state.cells});
+const valueResults = createValueResults({getRecords:()=>flightHistory.records()});
 createReport({getSnapshot:()=>({mission:state,candidates:state.cells.flatMap(c=>detail.candidates(c)),assumptions:valueResults.assumptions()})});
 const clock = seconds => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 const cells = new Map();

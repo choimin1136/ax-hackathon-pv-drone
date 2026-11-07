@@ -3,7 +3,7 @@ import { cellReviewStatus } from './cell-review-status.mjs';
 import {createDetailMedia} from './detail-media.mjs';
 import {candidatesFor, setDecision, reviewSummary} from './review.mjs';
 
-export function createDetail({getCell, onChange, titleId="review-title", archive=false}) {
+export function createDetail({getCell, onChange, titleId="review-title", archive=false,canReview=()=>true}) {
   let reviews = {};
   let active = null;
   let highlighted = null;
@@ -18,7 +18,7 @@ export function createDetail({getCell, onChange, titleId="review-title", archive
   const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./detail-media.css',import.meta.url).href;document.head.append(style);
   const analysis=createAnalysisExample({host:dialog.querySelector('[data-analysis]'),onChange:()=>render()});
   function updateControls() {
-    const usable=media.ready() && analysis.ready();
+    const usable=media.ready() && analysis.ready() && canReview();
     dialog.querySelectorAll('[data-candidates] button').forEach(button=>button.disabled=!usable);
     dialog.querySelector('[data-candidates]').hidden=!analysis.ready();
     media.display(showMask && analysis.ready(),highlighted);
@@ -69,9 +69,9 @@ export function createDetail({getCell, onChange, titleId="review-title", archive
   return {
     loadReviews(candidates) { reviews=Object.fromEntries(candidates.map(c=>[c.id,c.decision])); },
     open(id) {analysis.close();media.close();active=id;highlighted=null;render();dialog.showModal();},
-    refresh() {
+    refresh(force=false) {
       const cell=getCell(active);
-      if(dialog.open && cell && renderedStatus!==`${cell.cell_id}:${cell.status}:${cell.candidate_count}`) render();
+      if(dialog.open && cell && (force || renderedStatus!==`${cell.cell_id}:${cell.status}:${cell.candidate_count}`)) render();
     },
     candidates(cell) { return candidatesFor(cell).map(c=>({...c,cell_id:cell.cell_id,decision:reviews[c.id]??'pending'})); },
     summary(cell) {return reviewSummary(cell,reviews);},
