@@ -9,6 +9,7 @@ const lines = [
   { type: 'mission_start', mission_id: 'm1', t: 0, cells: ['A-1', 'A-2'] },
   { type: 'position', mission_id: 'm1', t: 0.5, position: { x_m: 0, y_m: 0, rel_alt_m: 3 }, heading: 340, battery: 99 },
   { type: 'frame', mission_id: 'm1', t: 9, vehicle_id: 'sitl_01', cell_id: 'A-1', waypoint: 1, source_photo: 'photo_001.jpg', position: { x_m: 0, y_m: 0, rel_alt_m: 30 }, battery: 98, captured_at: 'x' },
+  { type: 'log', mission_id: 'm1', t: 12, source: 'fc', text: 'Mission: 1 WP' },
   { type: 'mission_end', mission_id: 'm1', t: 40, frames: 1, planned: 2 }
 ];
 
@@ -28,6 +29,8 @@ test('returns a flight as positions and frames and ignores a half-written line',
   assert.equal(body.duration_s, 40);
   assert.deepEqual(body.positions, [{ t: 0.5, x_m: 0, y_m: 0, rel_alt_m: 3, heading: 340, battery: 99 }]);
   assert.equal(body.frames[0].cell_id, 'A-1');
+  assert.deepEqual(body.logs, [{ t: 12, source: 'fc', text: 'Mission: 1 WP' }]);
+  assert.deepEqual((await (await fetch(`${base}/api/missions`)).json()).missions, ['m1']);
   assert.equal(parseFlight('{"a":1}\n{bad').length, 1);
 }));
 

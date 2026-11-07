@@ -17,6 +17,8 @@ CELL_M = 20
 ALT_M = 30
 HOLD_S = 2
 VEHICLE_ID = "sitl_01"
+HOME_X_M = -30  # 이륙장은 발전소 격자 왼쪽 밖에 둡니다.
+HOME_Y_M = 30
 
 
 def plant_cells():
@@ -48,9 +50,9 @@ def select_cells(names):
 class Drone:
     TYPES = ["GLOBAL_POSITION_INT", "SYS_STATUS", "HEARTBEAT", "COMMAND_ACK", "MISSION_ITEM_REACHED", "STATUSTEXT"]
 
-    def __init__(self, url, mission_id, log):
+    def __init__(self, url, mission_id):
         self.mission_id = mission_id
-        self.log = log
+        self.log = None
         self.home = None
         self.pos = None
         self.battery = None
@@ -66,6 +68,10 @@ class Drone:
         self.log.write(json.dumps(line, ensure_ascii=False) + "\n")
         self.log.flush()
 
+    def event(self, text):
+        print(text)
+        self.write("log", source="mission", text=text)
+
     def read(self, timeout=1):
         msg = self.m.recv_match(type=self.TYPES, blocking=True, timeout=timeout)
         if msg is None:
@@ -73,6 +79,8 @@ class Drone:
         kind = msg.get_type()
         if kind == "STATUSTEXT":
             print("[fc]", msg.text)
+            if self.t0 is not None:
+                self.write("log", source="fc", text=msg.text)
         elif kind == "SYS_STATUS" and msg.battery_remaining >= 0:
             self.battery = msg.battery_remaining
         elif kind == "GLOBAL_POSITION_INT" and msg.lat != 0:
@@ -80,8 +88,8 @@ class Drone:
                 self.home = (msg.lat / 1e7, msg.lon / 1e7)
             # 실제 좌표는 기록하지 않고 발전소 상대 좌표만 남깁니다.
             self.pos = {
-                "x_m": round((msg.lon / 1e7 - self.home[1]) * 111320 * math.cos(math.radians(self.home[0])), 1),
-                "y_m": round((msg.lat / 1e7 - self.home[0]) * 111320, 1),
+                "x_m": round(HOME_X_M + (msg.lon / 1e7 - self.home[1]) * 111320 * math.cos(math.radians(self.home[0])), 1),
+                "y_m": round(HOME_Y_M + (msg.lat / 1e7 - self.home[0]) * 111320, 1),
                 "rel_alt_m": round(msg.relative_alt / 1000, 1),
             }
             if self.t0 is not None and time.monotonic() - self.last_write >= 0.5:
@@ -122,8 +130,8 @@ class Drone:
         rel = mav.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
         items = [(mav.MAV_FRAME_GLOBAL_INT, mav.MAV_CMD_NAV_WAYPOINT, 0, lat0, lon0, 0)]
         for c in cells:
-            lat = lat0 + c["y_m"] / 111320
-            lon = lon0 + c["x_m"] / (111320 * math.cos(math.radians(lat0)))
+            lat = lat0 + (c["y_m"] - HOME_Y_M) / 111320
+            lon = lon0 + (c["x_m"] - HOME_X_M) / (111320 * math.cos(math.radians(lat0)))
             items.append((rel, mav.MAV_CMD_NAV_WAYPOINT, HOLD_S, lat, lon, ALT_M))
         items.append((rel, mav.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0, 0))
 
@@ -159,7 +167,7 @@ class Drone:
             if time.monotonic() > end:
                 raise SystemExit("takeoff timeout")
             self.read()
-        print("takeoff done")
+        self.event("이륙 완료")
 
     def fly(self, cells):
         frames = 0
@@ -195,17 +203,20 @@ def main():
     out = Path(args.out_dir) / f"{args.mission_id}.jsonl"
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    # 연결에 실패해도 기존 기록이 지워지지 않도록 연결 후에 파일을 엽니다.
+    drone = Drone(args.connect, args.mission_id)
+    drone.wait_home()
+    drone.upload(cells)
+    drone.set_mode(GUIDED)
+    drone.arm()
     with out.open("w", encoding="utf-8") as log:
-        drone = Drone(args.connect, args.mission_id, log)
-        drone.wait_home()
-        drone.upload(cells)
-        drone.set_mode(GUIDED)
-        drone.arm()
+        drone.log = log
         drone.t0 = time.monotonic()
         drone.write("mission_start", cells=[c["cell_id"] for c in cells])
+        drone.event(f"미션 업로드와 시동 완료 ({len(cells)}개 셀)")
         drone.takeoff()
         drone.set_mode(AUTO)
-        print("auto start")
+        drone.event("AUTO 모드로 미션 수행 시작")
         frames = drone.fly(cells)
         drone.write("mission_end", frames=frames, planned=len(cells))
     print(f"landed: {frames}/{len(cells)} frames -> {out}")

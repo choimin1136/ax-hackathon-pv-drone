@@ -95,6 +95,7 @@ function render() {
   if (flight.phase !== 'idle') $('flight-position').textContent = flight.phase === 'complete' ? '선택 구역 재비행 완료 · 예시' : '재비행 · ' + (flight.phase === 'paused' ? '일시정지 · ' : '') + (flight.activeId ? flight.activeId + ' 예시 촬영' : '선택 구역으로 이동 중');
   renderRoute();
   renderReviewStates({cells:state.cells,getCounts:cell=>detail.summary(cell),selected});
+  document.dispatchEvent(new CustomEvent('mission:change', {detail: {...state, reflight: reinspection.flight()}}));
 }
 function schedule() {
   clearInterval(timer);

@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -28,7 +28,8 @@ export function summarizeFlight(missionId, rows) {
     complete: Boolean(end),
     duration_s: rows.at(-1)?.t ?? 0,
     positions: rows.filter(row => row.type === 'position').map(({ t, position, heading, battery }) => ({ t, ...position, heading, battery })),
-    frames: frames.map(({ t, cell_id, waypoint, source_photo, position, battery }) => ({ t, cell_id, waypoint, source_photo, position, battery }))
+    frames: frames.map(({ t, cell_id, waypoint, source_photo, position, battery }) => ({ t, cell_id, waypoint, source_photo, position, battery })),
+    logs: rows.filter(row => row.type === 'log').map(({ t, source, text }) => ({ t, source, text }))
   };
 }
 
@@ -51,6 +52,11 @@ export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, 
     if (base && pathname.startsWith(`${base}/`)) pathname = pathname.slice(base.length);
 
     if (pathname === '/api/health') return sendJson(res, 200, { ok: true }, head);
+    if (pathname === '/api/missions') {
+      const files = await readdir(flightDir).catch(() => []);
+      const missions = files.filter(name => name.endsWith('.jsonl')).map(name => name.slice(0, -'.jsonl'.length)).filter(id => MISSION_ID.test(id)).sort();
+      return sendJson(res, 200, { missions }, head);
+    }
     const mission = pathname.match(/^\/api\/missions\/([^/]+)$/);
     if (mission) {
       if (!MISSION_ID.test(mission[1])) return sendJson(res, 400, { error: 'invalid mission id' }, head);

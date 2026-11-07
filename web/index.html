@@ -9,8 +9,11 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./theme-light.css">
+  <link rel="stylesheet" href="./sitl.css">
   <script type="module" src="./app.mjs"></script>
   <script type="module" src="./navigation.mjs"></script>
+  <script type="module" src="./sitl.mjs"></script>
+  <script type="module" src="./reflight-view.mjs"></script>
 </head>
 <body>
   <a class="skip" href="#main">본문으로 이동</a>
@@ -46,6 +49,7 @@
           <div class="map-body"><div class="map-rows" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span></div><div class="grid-stage"><svg id="route" aria-hidden="true"><polyline id="route-line"/></svg><div id="cell-grid" class="cell-grid" aria-label="점검 구역 선택"></div></div></div>
           <div class="map-bottom"><span id="flight-position">미션을 시작하면 가상 경로가 표시됩니다</span><label class="route-toggle"><input id="show-route" type="checkbox" checked> 경로 표시</label></div>
         </div>
+        <div id="sitl"></div>
         <div class="legend" aria-label="구역 상태 범례"><span><i class="dot gray"></i>대기</span><span><i class="dot green"></i>탐지된 후보 없음</span><span><i class="dot amber"></i>주의</span><span><i class="dot red"></i>점검 권장</span><span><i class="dot violet"></i>재촬영 필요</span></div>
         <div class="map-help"><span aria-hidden="true">↗</span> 구역을 누르면 이미지와 탐지 후보를 바로 확인할 수 있어요.</div>
       </section>
@@ -54,10 +58,10 @@
           <div class="card-heading"><div><p class="eyebrow">MISSION CONTROL</p><h2 id="mission-title">점검 미션</h2></div><span id="phase-pill" class="phase-pill">준비</span></div>
           <p class="mission-copy" id="mission-copy">24개 구역을 순서대로 이동하며<br>점검하는 과정을 체험해 보세요.</p>
           <div class="progress-caption"><span>진행률</span><strong id="progress-text">0%</strong></div><progress id="progress" max="24" value="0" aria-label="미션 진행률">0%</progress>
-          <div class="mission-facts"><div><span>대상 구역</span><strong>24개</strong></div><div><span>경과 · 예시 시간</span><strong id="elapsed">00:00</strong></div><div><span>배터리 · 예시</span><strong id="battery">—</strong></div></div>
+          <div class="mission-facts"><div><span>대상 구역</span><strong>24개</strong></div><div><span>경과 · 예시 시간</span><strong id="elapsed">00:00</strong></div><div><span>배터리 · 시뮬</span><strong id="battery">—</strong></div></div>
           <button id="play" class="primary" type="button"><span aria-hidden="true">▶</span> 미션 체험하기</button>
           <div class="play-options"><button id="reset" class="text-button" type="button" disabled>↺ 처음으로</button><label>재생 속도 <select id="speed" aria-label="재생 속도"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select></label></div>
-          <p class="simulation-note">비행·상태·배터리는 모두 예시입니다.<br>실제 드론과 AI는 연결되지 않았습니다.</p>
+          <p class="simulation-note">구역 판정은 예시이고, 비행은 SITL 기록입니다.<br>실제 드론과 AI는 연결되지 않았습니다.</p>
         </section>
     <section class="metrics overview-summary" aria-label="점검 요약">
       <article class="metric"><span><i class="dot green"></i>탐지된 후보 없음</span><p><strong id="clear-count">0</strong><small>구역</small></p><span class="metric-note">탐지 결과가 안전을 보증하지 않습니다</span></article>
