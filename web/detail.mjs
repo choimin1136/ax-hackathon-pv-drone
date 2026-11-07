@@ -1,3 +1,4 @@
+import { cellReviewStatus } from './cell-review-status.mjs';
 import {createDetailMedia} from './detail-media.mjs';
 import {candidatesFor, setDecision, reviewSummary} from './review.mjs';
 
@@ -9,7 +10,7 @@ export function createDetail({getCell, onChange}) {
   let renderedStatus = '';
   const dialog = document.createElement('dialog');
   dialog.className = 'detail-dialog';
-  dialog.innerHTML = `<header><div><p class="eyebrow">시뮬레이션 · 합성 예시</p><h2 id="review-title">구역 상세</h2></div><button type="button" data-close aria-label="상세 창 닫기">닫기 ×</button></header><p class="review-disclaimer">합성 사진과 별도의 합성 마스크를 겹쳐 보여줍니다. 실제 촬영 사진·AI 예측 결과·정답 라벨이 아닙니다.</p><div class="review-layout"><section><div class="review-toolbar"><label><input type="checkbox" data-mask checked> 결함 영역 표시</label><span>640 × 512 · 예시</span></div><div data-image class="review-image"></div><p data-empty></p></section><section><h3>후보 확인</h3><p data-summary></p><div data-candidates></div><p class="review-disclaimer">확인 결과는 이 브라우저의 메모리에만 저장됩니다. 새로고침하거나 미션을 다시 시작하면 초기화됩니다.</p></section></div>`;
+  dialog.innerHTML = `<header><div><p class="eyebrow">시뮬레이션 · 합성 예시</p><h2 id="review-title">구역 상세</h2></div><button type="button" data-close aria-label="상세 창 닫기">닫기 ×</button></header><p class="review-disclaimer">합성 사진과 별도의 합성 마스크를 겹쳐 보여줍니다. 실제 촬영 사진·AI 예측 결과·정답 라벨이 아닙니다.</p><div class="review-layout"><section><div class="review-toolbar"><label><input type="checkbox" data-mask checked> 결함 영역 표시</label><span>640 × 512 · 예시</span></div><div data-image class="review-image"></div><p data-empty></p></section><section><h3>후보 확인</h3><p data-review-status role="status"></p><p data-summary></p><div data-candidates></div><p class="review-disclaimer">확인 결과는 이 브라우저의 메모리에만 저장됩니다. 새로고침하거나 미션을 다시 시작하면 초기화됩니다.</p></section></div>`;
   dialog.setAttribute('aria-labelledby','review-title');
   document.body.append(dialog);
   const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./detail-media.css',import.meta.url).href;document.head.append(style);
@@ -30,6 +31,7 @@ export function createDetail({getCell, onChange}) {
     renderedStatus = `${cell.cell_id}:${cell.status}:${cell.candidate_count}`;
     dialog.querySelector('h2').textContent = `${active} 구역 상세`;
     const counts = reviewSummary(cell,reviews);
+    dialog.querySelector('[data-review-status]').textContent = '현재 셀 상태: '+cellReviewStatus(cell,counts).label;
     dialog.querySelector('[data-summary]').textContent = `승인 ${counts.approved} · 제외 ${counts.excluded} · 미확인 ${counts.pending}`;
     dialog.querySelector('[data-empty]').textContent = cell.status === 'pending' ? '점검이 완료되면 예시 이미지와 후보를 볼 수 있습니다.' : cell.status === 'retake' ? '사진 전송 실패 예시입니다. 재촬영이 필요합니다.' : !cell.candidate_count ? '탐지된 후보가 없습니다. 안전을 보증하는 결과는 아닙니다.' : '후보 번호를 누르면 해당 영역이 강조됩니다.';
     const list = dialog.querySelector('[data-candidates]');

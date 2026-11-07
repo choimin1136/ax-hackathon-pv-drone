@@ -1039,3 +1039,6 @@ footer {
 .report-document h1 {font-size:26px;}.report-document h2 {font-size:20px;margin-top:32px;}.report-document h3 {font-size:16px;}
 .report-document table {width:100%;border-collapse:collapse;font-size:12px;}.report-document th,.report-document td {border:1px solid #b9c8be;padding:8px;text-align:left;overflow-wrap:anywhere;}.report-document th {background:#edf4eb;}.report-table {overflow-x:auto;}.report-document ul {font-size:13px;line-height:1.8;}
 @media(max-width:700px) {.report-dialog {padding:14px;}.report-document th,.report-document td {padding:5px;}}
+
+.cell.excluded {background:#e1e6e3;border-color:#92a19a;color:#41564c;}
+.status-badge.excluded {background:#e1e6e3;color:#41564c;}
