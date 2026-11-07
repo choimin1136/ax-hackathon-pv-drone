@@ -119,10 +119,10 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
     progress.max = route.length || 1; progress.value = flight.index;
     const labels = {idle:'대기',running:'진행 중',paused:'일시정지',complete:'완료'};
     root.querySelector('[data-flight-status]').textContent = notice ? notice : route.length
-      ? (external ? 'SITL 재비행 ' : '재비행 ') + labels[flight.phase] + ' · ' + flight.index + '/' + route.length + '곳 · ' + (external ? '비행 경과 ' : '예시 경과 ') + flight.elapsed + '초' + (flight.phase === 'complete' ? ' · 선택 구역 방문 완료. 새 분석 결과는 없습니다.' : '')
+      ? (external ? '드론 재비행 ' : '재비행 ') + labels[flight.phase] + ' · ' + flight.index + '/' + route.length + '곳 · ' + (external ? '비행 경과 ' : '예시 경과 ') + flight.elapsed + '초' + (flight.phase === 'complete' ? ' · 선택 구역 방문 완료. 새 분석 결과는 없습니다.' : '')
       : '전체 점검 완료 후 대상을 선택하고 확정하세요.';
     const play = root.querySelector('[data-flight-play]');
-    play.textContent = external && flight.phase === 'running' ? 'SITL 재비행 중' : flight.phase === 'running' ? '재비행 일시정지' : flight.phase === 'paused' ? '재비행 이어서 재생' : flight.phase === 'complete' ? '선택 구역 다시 재비행' : '선택 구역 재비행 시작';
+    play.textContent = external && flight.phase === 'running' ? '드론 재비행 중' : flight.phase === 'running' ? '재비행 일시정지' : flight.phase === 'paused' ? '재비행 이어서 재생' : flight.phase === 'complete' ? '선택 구역 다시 재비행' : '선택 구역 재비행 시작';
     play.disabled = !isMissionComplete() || (!busy() && !confirmed) || (external && busy());
     root.querySelector('[data-flight-reset]').disabled = flight.phase === 'idle' || (external && busy());
   }
