@@ -1,3 +1,4 @@
+import { renderReviewStates } from './cell-review-status.mjs';
 import { createReport } from './report.mjs';
 import { createValueResults } from './value.mjs';
 import { CELL_IDS, ROUTE, STATUS, createMission, startMission, pauseMission, tickMission, summarize } from './mission.mjs';
@@ -98,6 +99,7 @@ function render() {
   const flight = reinspection.flight();
   if (flight.phase !== 'idle') $('flight-position').textContent = flight.phase === 'complete' ? '선택 구역 재비행 완료 · 예시' : '재비행 · ' + (flight.phase === 'paused' ? '일시정지 · ' : '') + (flight.activeId ? flight.activeId + ' 예시 촬영' : '선택 구역으로 이동 중');
   renderRoute();
+  renderReviewStates({cells:state.cells,getCounts:cell=>detail.summary(cell),selected});
 }
 function schedule() {
   clearInterval(timer);
