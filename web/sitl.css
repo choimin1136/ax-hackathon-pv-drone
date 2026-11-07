@@ -84,3 +84,22 @@
 /* The model reports only 0 (no hotspot) or 3 (hotspot), so the retake count is not shown. */
 #overview .overview-summary .metric:has(#retake-count) {display:none;}
 @media(min-width:521px) {#overview .map-card .overview-summary {grid-template-columns:repeat(2,minmax(0,1fr));}}
+/* Right-column cards fold down to their heading. */
+.collapse-head {display:flex;align-items:center;gap:8px;}
+.collapse-head>span:not(.phase-pill) {margin-left:auto;}
+.collapse-toggle {flex:none;padding:4px 9px;border:1px solid var(--line);border-radius:7px;font-size:11px;font-weight:600;color:#52647e;background:#fff;cursor:pointer;}
+.collapse-head>span+.collapse-toggle {margin-left:0;}
+.collapse-head>h3+.collapse-toggle,.collapse-head>div+.collapse-toggle {margin-left:auto;}
+.mission-card .collapse-head .phase-pill {margin-left:auto;}
+[data-collapsed="true"]>:not(.collapse-head) {display:none!important;}
+[data-collapsed="true"]>.collapse-head {margin-bottom:0;}
+.thermal-card {min-width:0;padding:16px 20px;border:1px solid var(--line);border-radius:16px;background:#fff;}
+.thermal-frame {position:relative;display:block;width:100%;aspect-ratio:640/512;padding:0;overflow:hidden;border:0;border-radius:10px;background:#1c1830;cursor:pointer;}
+.thermal-frame:disabled {cursor:default;}
+.thermal-frame img {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.thermal-frame img:not([src]) {display:none;}
+.thermal-frame [data-mask] {opacity:.75;}
+.thermal-empty {position:absolute;inset:0;display:grid;place-items:center;padding:16px;font-size:12px;color:#b9b3d6;text-align:center;}
+.thermal-card.has-image .thermal-empty {display:none;}
+.thermal-caption {min-height:18px;margin:8px 2px 0;font-size:12px;color:var(--muted);}
+.thermal-caption[data-status="check"] {color:#c63038;font-weight:600;}
