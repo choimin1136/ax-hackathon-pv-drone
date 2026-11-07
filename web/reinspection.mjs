@@ -87,7 +87,7 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
     root.querySelector('[data-recommend]').disabled = busy() || !recommended;
     root.querySelector('[data-recommend]').textContent = `추천 대상 선택 (${recommended}곳)`;
     root.querySelector('[data-clear]').disabled = busy() || !targets.length;
-    root.querySelector('[data-confirm]').disabled = busy() || !targets.length || confirmed;
+    root.querySelector('[data-confirm]').disabled = busy() || !targets.length || (confirmed && flight.phase !== 'complete');
     root.querySelector('[data-selection]').textContent = `선택 ${targets.length}곳${targets.length ? ' · 선택한 구역을 확정하세요.' : ' · 점검 후 대상을 선택하세요.'}`;
     root.querySelector('[data-result]').textContent = confirmed ? `예시 선택 ${targets.length}곳 확정 · 오른쪽에서 방문 순서를 확인하세요. 실제 비행은 시작되지 않습니다.` : '대상을 선택한 뒤 확정하세요. 추천 목록은 후보 확인 결과에 따라 바뀌며, 직접 선택한 대상은 유지됩니다.';
     const route = flight.targets.length ? flight.targets : confirmed ? targets : [];
@@ -134,7 +134,12 @@ export function createReinspection({ getCells, getSummary, isMissionComplete, on
     onFlightChange();
   };
   root.querySelector('[data-clear]').onclick = () => { selected.clear(); confirmed = false; clearFlight(); onFlightChange(); };
-  root.querySelector('[data-confirm]').onclick = () => { confirmed = true; onFlightChange(); };
+  root.querySelector('[data-confirm]').onclick = () => {
+    if (busy()) return;
+    if (flight.phase === 'complete') clearFlight();
+    confirmed = true;
+    onFlightChange();
+  };
   root.querySelector('[data-flight-play]').onclick = () => {
     if (!isMissionComplete()) return;
     if (flight.phase === 'running') flight = pauseReflight(flight);
