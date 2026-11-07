@@ -13,9 +13,14 @@ const PANEL_LOW_M = 2;
 const PANEL_HIGH_M = 6.5;
 const PANEL_THICK_M = 0.7;
 const SHADOW_SLANT = 0.9;
-const COLORS = { ground: '#dfe7f2', field: '#d3dce8', panelShadow: 'rgba(23, 36, 59, 0.16)', post: '#6f7d92', panelEdge: '#3b475b', frame: 'rgba(84, 99, 122, 0.55)', line: '#ffffff', active: '#f2b632', label: '#ffffff', activeLabel: '#17243b', pad: '#94a3b8', padMark: '#ffffff', trail: '#2563eb', shadow: '#55657d', tether: '#55657d', drone: '#17243b', rotor: '#2563eb', rotorDisc: 'rgba(37, 99, 235, 0.3)', capture: 'rgba(242, 182, 50, 0.4)' };
+const COLORS = { ground: '#8aa779', field: '#7e9d6c', panelShadow: 'rgba(23, 36, 59, 0.16)', post: '#6f7d92', panelEdge: '#3b475b', frame: 'rgba(84, 99, 122, 0.55)', line: '#ffffff', active: '#f2b632', label: '#ffffff', activeLabel: '#17243b', pad: '#94a3b8', padMark: '#ffffff', trail: '#2563eb', shadow: '#55657d', tether: '#55657d', drone: '#17243b', rotor: '#2563eb', rotorDisc: 'rgba(37, 99, 235, 0.3)', capture: 'rgba(242, 182, 50, 0.4)' };
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const cells = plantCells();
+// Fixed world-space blades keep the texture still while the camera or drone moves.
+const grass = Array.from({length:1100}, (_,i) => {
+  const random = salt => { const n=Math.sin((i+1)*salt)*43758.5453; return n-Math.floor(n); };
+  return {x:-47+random(12.9898)*164,y:-17+random(78.233)*94,length:0.35+random(39.425)*0.65,lean:(random(24.617)-0.5)*0.7};
+});
 
 // Draws the plant, launch pad and drone on a canvas. Screens supply the flight and the cell colours.
 export function createScene(canvas, { fillOf, isActive, onCellClick, onRender }) {
@@ -89,6 +94,21 @@ export function createScene(canvas, { fillOf, isActive, onCellClick, onRender })
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(id, lx, ly);
   }
+  function drawGrass() {
+    ctx.save();
+    tracePolygon([[-48,-18],[118,-18],[118,78],[-48,78]].map(([x,y])=>project(x,y)));
+    ctx.clip();
+    for(let tone=0;tone<2;tone++) {
+      ctx.beginPath();
+      for(let i=tone;i<grass.length;i+=2) {
+        const blade=grass[i],a=project(blade.x,blade.y),b=project(blade.x+blade.lean,blade.y-blade.length);
+        ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);
+      }
+      ctx.strokeStyle=tone?'rgba(229,239,192,0.23)':'rgba(43,77,41,0.18)';
+      ctx.lineWidth=0.7;ctx.stroke();
+    }
+    ctx.restore();
+  }
   function drawPad() {
     const { x_m: x, y_m: y } = flight?.positions[0] ?? HOME;
     circle(x, y, 0, PAD_RADIUS, COLORS.pad);
@@ -144,6 +164,7 @@ export function createScene(canvas, { fillOf, isActive, onCellClick, onRender })
       ctx.clearRect(0, 0, view.w, view.h);
       polygon([[-48, -18], [118, -18], [118, 78], [-48, 78]].map(([x, y]) => project(x, y)), COLORS.ground);
       polygon([[-1, -1], [CELL_M * 6 + 1, -1], [CELL_M * 6 + 1, CELL_M * 4 + 1], [-1, CELL_M * 4 + 1]].map(([x, y]) => project(x - HALF, y - HALF)), COLORS.field);
+      drawGrass();
       drawPad();
       byDepth().forEach(cell => drawCell(cell, state));
       drawTrail(state?.phase);
