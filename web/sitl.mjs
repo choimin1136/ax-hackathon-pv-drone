@@ -1,3 +1,4 @@
+import { CELL_COLORS } from './panel-colors.mjs';
 import { buildLog, logUntil, plantCells, targetTime } from './flight.mjs';
 import { createScene, createViewToggle } from './flight-scene.mjs';
 import { missionFromFlight } from './mission.mjs';
@@ -15,7 +16,6 @@ const POLL_MS = 1000;
 const CAPTURE_S = 2;
 const LANDING_MS = 6000;
 const CONFIRM_MS = 5000;
-const CELL_COLORS = { pending: '#172d46', no_candidate: '#087d57', caution: '#d18a12', check: '#c63038', retake: '#713bc2' };
 const NOTES = {
   demo: '구역 판정은 예시이고, 비행은 저장된 가상 드론 기록입니다.<br>실제 드론과 AI는 연결되지 않았습니다.',
   live: '서버에서 가상 드론(ArduPilot 시뮬레이터)을 실행합니다. 실제 기체 비행이 아니며,<br>구역 판정은 예시이고 AI는 연결되지 않았습니다.'

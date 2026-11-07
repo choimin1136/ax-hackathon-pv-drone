@@ -1,6 +1,7 @@
+import { createPredictions } from './predictions.mjs';
+import { selectionPanelColor } from './panel-colors.mjs';
 import { createScene, createViewToggle } from './flight-scene.mjs';
 
-const TILE_COLORS = { outside: '#172d46', target: '#3a68a8', done: '#087d57' };
 
 const card = document.querySelector('.reflight-map-card');
 const stage = document.createElement('div');
@@ -14,13 +15,19 @@ note.textContent = IDLE_NOTE;
 card.querySelector('.reflight-map-note').before(note);
 
 let live = false;
+let previousCells=[],lastLiveTime=-1;
+const predictions=createPredictions(()=>scene.render());
+document.addEventListener('reflight:start',()=>{predictions.clear();lastLiveTime=-1;});
 
 function tileKind(id) {
   const tile = card.querySelector(`[aria-label^="${id} ·"]`);
   return ['done', 'active', 'target'].find(kind => tile?.classList.contains(kind)) ?? 'outside';
 }
 const scene = createScene(stage.querySelector('canvas'), {
-  fillOf: id => TILE_COLORS[tileKind(id)] ?? TILE_COLORS.outside,
+  fillOf: id => {
+    const kind=tileKind(id);
+    return selectionPanelColor({kind,live,result:live&&kind==='done'?predictions.peek(id):null,previousStatus:previousCells.find(c=>c.cell_id===id)?.status});
+  },
   isActive: id => tileKind(id) === 'active'
 });
 scene.setFlight(null);
@@ -34,10 +41,15 @@ toggle.set('3d');
 document.addEventListener('sitl:flight', event => {
   const source = stage.querySelector('.sitl-source');
   if (!event.detail) { live = false; source.textContent = '드론 비행 대기'; note.textContent = IDLE_NOTE; scene.setFlight(null); scene.render(); return; }
-  if (!live) { live = true; scene.stop(); source.textContent = '드론 비행'; note.textContent = '드론 재비행의 실시간 위치를 보여 줍니다.'; }
+  if (!live) { live = true; scene.stop(); source.textContent = '드론 비행'; note.textContent = '남청색: 대기·결과 미확인 · 초록색: 핫스팟 없음 · 빨간색: 핫스팟 탐지 · 노란색: 촬영 중'; }
+  if(event.detail.t<lastLiveTime)predictions.clear();
+  lastLiveTime=event.detail.t;
   scene.setFlight(event.detail.flight);
   scene.setTime(event.detail.t);
 });
 
-// Tile colours follow the reinspection map, so redraw when it changes.
-document.addEventListener('mission:change', () => scene.render());
+// Tile colours follow the reinspection map and the previous cell results, so redraw when they change.
+document.addEventListener('mission:change', event => {
+  previousCells=event.detail.cells??previousCells;
+  scene.render();
+});
