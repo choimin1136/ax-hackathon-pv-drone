@@ -5,6 +5,13 @@ export function createServerHistoryStore(onChange) {
   async function refresh(){if(saving)return;const version=revision;try{const next=await request();if(version!==revision)return;const changed=error||JSON.stringify(next)!==JSON.stringify(records);records=next;error='';if(changed)onChange();}catch(e){error=e.message;onChange();}}
   return {
     list:()=>structuredClone(records),error:()=>error,saving:()=>saving,refresh,
+    async remove(id){
+      if(saving)return;
+      revision++;saving=true;error='서버 기록을 삭제 중입니다.';onChange();
+      try{records=await request({method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});error='';}
+      catch(e){error='기록을 삭제하지 못했습니다. 비행 진행 여부와 서버 연결을 확인하세요.';}
+      finally{revision++;saving=false;onChange();}
+    },
     review(id,cellId,candidates){
       const cell=records.find(r=>r.id===id)?.cells.find(c=>c.cell_id===cellId);
       const changes=candidates.filter(p=>cell?.candidates.find(c=>c.id===p.id)?.decision!==p.decision);

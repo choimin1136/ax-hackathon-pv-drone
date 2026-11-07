@@ -35,5 +35,14 @@ test('shared API returns saved reviews to a separate client and rejects invalid 
  assert.equal((await patch('B-2-h1','invalid')).status,400);
  await writeFile(path.join(dir,'second.jsonl'),[{type:'mission_start',cells:['A-3']},{type:'frame',cell_id:'A-3'},{type:'mission_end'}].map(JSON.stringify).join('\n'));
  assert.equal((await (await fetch(url)).json()).records.length,2);
+ const deletion=await fetch(url,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:r.id})});
+ assert.equal(deletion.status,200);assert.equal((await deletion.json()).records.length,1);
+ assert.equal((await (await fetch(url)).json()).records.length,1);
+ assert.equal((await patch('B-2-h1','approved')).status,404);
+ const reopened=createInspectionHistory({file:path.join(dir,'inspection-history.json'),flightDir:dir});
+ assert.equal((await reopened.list()).length,1);
+ await writeFile(path.join(dir,'running.jsonl'),JSON.stringify({type:'mission_start',cells:['A-1']}));
+ const running=(await reopened.list()).find(r=>r.phase==='running');
+ await assert.rejects(reopened.remove(running.id),{status:409});
  }finally{await new Promise(resolve=>app.close(resolve));await rm(dir,{recursive:true,force:true});}
 });

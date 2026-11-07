@@ -73,6 +73,7 @@ export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, 
       try {
         if(req.method==='GET'||head)return sendJson(res,200,{records:await history.list()},head);
         if(req.method==='PATCH') {const b=await readJson(req);return sendJson(res,200,{records:await history.review(b.id,b.cellId,b.candidateId,b.decision)});}
+        if(req.method==='DELETE') {const b=await readJson(req);return sendJson(res,200,{records:await history.remove(b.id)});}
         return sendJson(res,405,{error:'method not allowed'});
       } catch(error){return sendJson(res,error.status??500,{error:error.status?error.message:'history storage unavailable'});}
     }
