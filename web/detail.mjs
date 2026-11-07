@@ -3,7 +3,7 @@ import { cellReviewStatus } from './cell-review-status.mjs';
 import {createDetailMedia} from './detail-media.mjs';
 import {candidatesFor, setDecision, reviewSummary} from './review.mjs';
 
-export function createDetail({getCell, onChange}) {
+export function createDetail({getCell, onChange, titleId="review-title", archive=false}) {
   let reviews = {};
   let active = null;
   let highlighted = null;
@@ -11,8 +11,9 @@ export function createDetail({getCell, onChange}) {
   let renderedStatus = '';
   const dialog = document.createElement('dialog');
   dialog.className = 'detail-dialog';
-  dialog.innerHTML = `<header><div><p class="eyebrow">시뮬레이션 · 합성 예시</p><h2 id="review-title">구역 상세</h2></div><button type="button" data-close aria-label="상세 창 닫기">닫기 ×</button></header><p class="review-disclaimer">합성 사진과 별도의 합성 마스크를 겹쳐 보여줍니다. 실제 촬영 사진·AI 예측 결과·정답 라벨이 아닙니다.</p><div class="review-layout"><section><div class="review-toolbar"><label><input type="checkbox" data-mask checked> 결함 영역 표시</label><span>640 × 512 · 예시</span></div><div data-image class="review-image"></div><p data-empty></p></section><section><div data-analysis></div><h3>후보 확인 기록</h3><p data-review-status role="status"></p><p data-summary></p><div data-candidates></div><p class="review-disclaimer">확인 결과는 이 브라우저의 메모리에만 저장됩니다. 새로고침하거나 미션을 다시 시작하면 초기화됩니다.</p></section></div>`;
-  dialog.setAttribute('aria-labelledby','review-title');
+  dialog.innerHTML = `<header><div><p class="eyebrow">시뮬레이션 · 합성 예시</p><h2 id="${titleId}">구역 상세</h2></div><button type="button" data-close aria-label="상세 창 닫기">닫기 ×</button></header><p class="review-disclaimer">합성 사진과 별도의 합성 마스크를 겹쳐 보여줍니다. 실제 촬영 사진·AI 예측 결과·정답 라벨이 아닙니다.</p><div class="review-layout"><section><div class="review-toolbar"><label><input type="checkbox" data-mask checked> 결함 영역 표시</label><span>640 × 512 · 예시</span></div><div data-image class="review-image"></div><p data-empty></p></section><section><div data-analysis></div><h3>후보 확인 기록</h3><p data-review-status role="status"></p><p data-summary></p><div data-candidates></div><p class="review-disclaimer">확인 결과는 이 브라우저의 메모리에만 저장됩니다. 새로고침하거나 미션을 다시 시작하면 초기화됩니다.</p></section></div>`;
+  dialog.setAttribute('aria-labelledby',titleId);
+  if(archive) dialog.querySelector('.review-layout section:last-child>.review-disclaimer').textContent='이 비행 기록에만 저장됩니다. 현재 점검 결과에는 영향을 주지 않습니다.';
   document.body.append(dialog);
   const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./detail-media.css',import.meta.url).href;document.head.append(style);
   const analysis=createAnalysisExample({host:dialog.querySelector('[data-analysis]'),onChange:()=>render()});
@@ -66,6 +67,7 @@ export function createDetail({getCell, onChange}) {
     updateControls();
   }
   return {
+    loadReviews(candidates) { reviews=Object.fromEntries(candidates.map(c=>[c.id,c.decision])); },
     open(id) {analysis.close();media.close();active=id;highlighted=null;render();dialog.showModal();},
     refresh() {
       const cell=getCell(active);
