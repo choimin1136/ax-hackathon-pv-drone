@@ -35,7 +35,7 @@ SunPatch의 드론은 실제 기체 대신 **ArduPilot SITL**(Software In The Lo
 | 구역 도착 후 정지 | 2초 | `HOLD_S` |
 | 이륙장 | 격자 왼쪽 밖 (-30m, 30m) | `HOME_X_M`, `HOME_Y_M` |
 | 비행 순서 | 지그재그: A-1→A-6, B-6→B-1, C-1→C-6, D-6→D-1 | `plant_cells()` |
-| 시작 위치 | 위도 -35.363261, 경도 149.165230, 고도 584m, 방위 353° (ArduPilot 기본 시험장) | `sitl-control.mjs` `--home` |
+| 시작 위치 | 위도 -35.363261, 경도 149.165230, 고도 584m, 방위 353° (ArduPilot 기본 시험장) | `config.mjs` `sitlHome` (`SITL_HOME`) |
 
 화면과 기록에는 실제 좌표를 남기지 않고 발전소 기준 상대 좌표(x, y, m)만 남깁니다.
 
@@ -165,7 +165,7 @@ tmux new-session -d -s web 'bash /data/hackathon/run-web.sh'
 
 ## 설정값
 
-모든 값은 환경 변수로 바꿀 수 있고, 비워 두면 아래 기본값을 씁니다. 예시 파일은 [sitl.env.example](sitl.env.example)입니다.
+기본값은 [server/config.mjs](../server/config.mjs)의 `DEFAULTS`에 모여 있고, 환경 변수로 덮어씁니다. 예시 파일은 [sitl.env.example](sitl.env.example)입니다.
 
 | 변수 | 기본값 | 뜻 |
 |---|---|---|
@@ -173,6 +173,7 @@ tmux new-session -d -s web 'bash /data/hackathon/run-web.sh'
 | `SITL_BIN` | `/data/hackathon/ardupilot/build/sitl/bin/arducopter` | SITL 실행 파일 |
 | `SITL_DEFAULTS` | `.../Tools/autotest/default_params/copter.parm` | 기체 기본 파라미터 |
 | `SITL_DIR` | `/data/hackathon/sitl-run` | SITL 작업 폴더(eeprom 등) |
+| `SITL_HOME` | `-35.363261,149.165230,584,353` | 시작 위치(위도, 경도, 고도 m, 방위 °) |
 | `PYTHON_BIN` | `/data/hackathon/drone-venv/bin/python` | 비행 프로그램용 Python |
 | `MISSION_SCRIPT` | 저장소의 `drone/mission.py` | 비행 프로그램 |
 | `FLIGHT_DIR` | 저장소의 `drone/sample_flight` | 비행 기록 폴더 |

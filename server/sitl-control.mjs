@@ -1,22 +1,20 @@
 import { execFile, spawn } from 'node:child_process';
 import { mkdir, unlink } from 'node:fs/promises';
 import net from 'node:net';
-import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { sitlConfig } from './config.mjs';
 
-const ROOT = '/data/hackathon';
 const CELLS = /^[A-D]-[1-6](,[A-D]-[1-6]){0,23}$/;
 export const LIVE_ID = 'live';
-const SITL_PORT = 5760;
 const STAGE_LINES = [['armed', 'takeoff'], ['mission uploaded', 'arming'], ['home ready', 'mission']];
 
 function pgrep() {
   return new Promise(resolve => execFile('pgrep', ['-x', 'arducopter'], error => resolve(!error)));
 }
 // SITL waits for its first connection before it runs, so this one check also starts the simulation clock.
-function portOpen() {
+function portOpen(port) {
   return new Promise(resolve => {
-    const socket = net.connect(SITL_PORT, '127.0.0.1');
+    const socket = net.connect(port, '127.0.0.1');
     const finish = open => { socket.destroy(); resolve(open); };
     socket.setTimeout(1000, () => finish(false));
     socket.on('connect', () => finish(true));
@@ -27,14 +25,11 @@ function pkill() {
   return new Promise(resolve => execFile('pkill', ['-x', 'arducopter'], () => resolve()));
 }
 
-// Starts and stops ArduPilot SITL and the mission program on the server. Paths are fixed by the operator's environment.
-export function createSitlControl({ flightDir, env = process.env, findSitl = pgrep, killSitl = pkill, probe = portOpen, sitlArgs }) {
-  const speedup = env.SITL_SPEEDUP ?? '8';
-  const sitlBin = env.SITL_BIN ?? `${ROOT}/ardupilot/build/sitl/bin/arducopter`;
-  const sitlDefaults = env.SITL_DEFAULTS ?? `${ROOT}/ardupilot/Tools/autotest/default_params/copter.parm`;
-  const sitlDir = env.SITL_DIR ?? `${ROOT}/sitl-run`;
-  const python = env.PYTHON_BIN ?? `${ROOT}/drone-venv/bin/python`;
-  const script = env.MISSION_SCRIPT ?? fileURLToPath(new URL('../drone/mission.py', import.meta.url));
+// Starts and stops ArduPilot SITL and the mission program on the server. Paths and speed come from config.mjs.
+export function createSitlControl({ flightDir, env = process.env, findSitl = pgrep, killSitl = pkill, probe, sitlArgs }) {
+  const config = sitlConfig(env);
+  const { speedup, bin: sitlBin, defaults: sitlDefaults, dir: sitlDir, python, missionScript: script } = config;
+  probe ??= () => portOpen(config.port);
   let sitlChild = null, missionChild = null, missionResult = 'idle', ready = false, stage = null;
 
   const launch = (bin, args, options, onExit) => {
@@ -53,7 +48,7 @@ export function createSitlControl({ flightDir, env = process.env, findSitl = pgr
   async function start() {
     if ((await status()).sitl) return status();
     await mkdir(sitlDir, { recursive: true });
-    sitlChild = launch(sitlBin, sitlArgs ?? ['--model', '+', '--speedup', speedup, '--defaults', sitlDefaults, '-I0', '--home', '-35.363261,149.165230,584,353'], { cwd: sitlDir }, () => { sitlChild = null; });
+    sitlChild = launch(sitlBin, sitlArgs ?? ['--model', '+', '--speedup', speedup, '--defaults', sitlDefaults, '-I0', '--home', config.home], { cwd: sitlDir }, () => { sitlChild = null; });
     return status();
   }
   async function stop() {

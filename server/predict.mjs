@@ -1,11 +1,9 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { modelConfig } from './config.mjs';
 
-export const DEFAULT_MODEL_URL = 'https://aiopen-serving.jntp-ax.or.kr/jntp-gpu/SV-5b69676e/predict';
 const CELL = /^[A-D]-[1-6]$/;
 const PHOTO = /\.(jpe?g|png)$/i;
-const TIMEOUT_MS = 30000;
-const LIST_MS = 60000;
 // For the demo every full flight shows at least one hotspot early: one cell of the first two rows (the first half of
 // the route) gets a photo from a hotspot folder, re-drawn until the model really calls it a hotspot.
 const HOT_ROUTE = ['A-1', 'A-2', 'A-3', 'A-4', 'A-5', 'A-6', 'B-6', 'B-5', 'B-4', 'B-3', 'B-2', 'B-1'];
@@ -16,10 +14,9 @@ const HOT_TRIES = 5;
 // label JSON in TL_*, which the extension filter skips). An "A-1.jpg" style name wins, otherwise each full flight
 // draws a random photo per cell (without repeats while the folder has enough), with one guaranteed hotspot cell.
 export function createPredictor({ env = process.env, fetchImpl = fetch, random = Math.random } = {}) {
-  const photoDir = env.PHOTO_DIR ? path.resolve(env.PHOTO_DIR) : null;
-  const modelUrl = env.MODEL_URL ?? DEFAULT_MODEL_URL;
+  const { url: modelUrl, photoDir, hotspotPattern, timeoutMs, photoListMs } = modelConfig(env);
   const cache = new Map();
-  const hotPhoto = new RegExp(env.HOTSPOT_PHOTO_PATTERN ?? 'positive', 'i');
+  const hotPhoto = new RegExp(hotspotPattern, 'i');
   let assigned = new Map(), listed = null, listedAt = 0, pending = new Map();
   let hotCell = null, hotTried = new Set();
   function pickHotCell() { hotCell = HOT_ROUTE[Math.floor(random() * HOT_ROUTE.length)]; hotTried = new Set(); }
@@ -28,7 +25,7 @@ export function createPredictor({ env = process.env, fetchImpl = fetch, random =
   // Large datasets are listed at most once a minute; names are paths relative to PHOTO_DIR.
   async function photos() {
     if (!photoDir) return [];
-    if (!listed || Date.now() - listedAt > LIST_MS) {
+    if (!listed || Date.now() - listedAt > photoListMs) {
       const entries = await readdir(photoDir, { recursive: true }).catch(() => []);
       listed = entries.filter(name => PHOTO.test(name)).sort();
       listedAt = Date.now();
@@ -56,7 +53,7 @@ export function createPredictor({ env = process.env, fetchImpl = fetch, random =
     const file = path.join(photoDir, name);
     const form = new FormData();
     form.append('file', new Blob([await readFile(file)], { type: name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg' }), path.basename(name));
-    const response = await fetchImpl(modelUrl, { method: 'POST', body: form, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    const response = await fetchImpl(modelUrl, { method: 'POST', body: form, signal: AbortSignal.timeout(timeoutMs) });
     if (!response.ok) throw new Error(`model status ${response.status}`);
     return response.json();
   }

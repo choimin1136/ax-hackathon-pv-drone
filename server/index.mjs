@@ -5,10 +5,9 @@ import path from 'node:path';
 import { createSitlControl } from './sitl-control.mjs';
 import { createInspectionHistory } from './inspection-history.mjs';
 import { createPredictor } from './predict.mjs';
+import { DEFAULTS, describeConfig, webConfig } from './config.mjs';
 import { createPredictionRecorder } from './prediction-recorder.mjs';
 
-const DEFAULT_WEB = fileURLToPath(new URL('../web/', import.meta.url));
-const DEFAULT_FLIGHTS = fileURLToPath(new URL('../drone/sample_flight/', import.meta.url));
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8' };
 const MISSION_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_BODY = 1024;
@@ -55,7 +54,7 @@ function sendJson(res, status, body, head) {
   res.end(head ? undefined : JSON.stringify(body));
 }
 
-export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, historyFile = path.join(flightDir,'inspection-history.json'), basePath = '', sitlEnv = process.env, sitlHooks = {}, sitlArgsForTest, predictor = createPredictor() } = {}) {
+export function createApp({ webRoot = DEFAULTS.webRoot, flightDir = DEFAULTS.flightDir, historyFile = path.join(flightDir,'inspection-history.json'), basePath = '', sitlEnv = process.env, sitlHooks = {}, sitlArgsForTest, predictor = createPredictor() } = {}) {
   const base = basePath.replace(/\/+$/, '');
   const sitl = createSitlControl({ flightDir, env: sitlEnv, sitlArgs: sitlArgsForTest, ...sitlHooks });
   const history = createInspectionHistory({file:historyFile,flightDir});
@@ -153,9 +152,8 @@ export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, 
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const port = Number(process.env.PORT ?? 5173);
-  const host = process.env.HOST ?? '127.0.0.1';
-  const app = createApp({ flightDir: process.env.FLIGHT_DIR ? path.resolve(process.env.FLIGHT_DIR) : DEFAULT_FLIGHTS, ...(process.env.HISTORY_FILE ? {historyFile:path.resolve(process.env.HISTORY_FILE)} : {}), basePath: process.env.BASE_PATH ?? '' });
+  const { host, port, flightDir, historyFile, basePath } = webConfig();
+  const app = createApp({ flightDir, historyFile, basePath });
   app.on('error', error => { console.error(`Server failed: ${error.message}`); process.exitCode = 1; });
-  app.listen(port, host, () => console.log(`Server: http://${host}:${port}`));
+  app.listen(port, host, () => { console.log(`Server: http://${host}:${port}`); console.log(describeConfig()); });
 }

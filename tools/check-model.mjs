@@ -4,16 +4,17 @@
 //   node tools/check-model.mjs --count 10 --web http://127.0.0.1:8501
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { DEFAULT_MODEL_URL } from '../server/predict.mjs';
+import { modelConfig } from '../server/config.mjs';
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args[i + 1] : fallback; };
-const modelUrl = option('model', process.env.MODEL_URL ?? DEFAULT_MODEL_URL);
-const photoDir = path.resolve(option('photos', process.env.PHOTO_DIR ?? '/data/test'));
+const model = modelConfig();
+const modelUrl = option('model', model.url);
+const photoDir = path.resolve(option('photos', model.photoDir ?? '/data/test'));
 const count = Math.max(2, Number(option('count', 6)));
 const webUrl = option('web', `http://127.0.0.1:${process.env.PORT ?? 8501}`).replace(/\/+$/, '');
-const hotspot = new RegExp(process.env.HOTSPOT_PHOTO_PATTERN ?? 'positive', 'i');
-const TIMEOUT_MS = 30000;
+const hotspot = new RegExp(model.hotspotPattern, 'i');
+const TIMEOUT_MS = model.timeoutMs;
 let failed = false;
 
 const pick = (list, n) => [...list].sort(() => Math.random() - 0.5).slice(0, n);

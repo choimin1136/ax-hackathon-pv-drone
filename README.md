@@ -131,7 +131,7 @@ cd /data/hackathon/deploy && PHOTO_DIR=/data/test npm run check:model -- --count
 
 ### 설정값
 
-웹 서버는 환경 변수로 설정합니다. 비워 두면 기본값을 씁니다. 전체 예시는 [sitl/sitl.env.example](sitl/sitl.env.example)에 있습니다.
+바뀔 수 있는 값과 기본값은 모두 [server/config.mjs](server/config.mjs) 한 곳에 있습니다. 서버마다 다른 값은 환경 변수로 덮어쓰고, 비워 두면 기본값을 씁니다. 서버가 켜질 때 쓰는 설정을 `Config: …` 한 줄로 로그에 남깁니다. 전체 예시는 [sitl/sitl.env.example](sitl/sitl.env.example)에 있습니다.
 
 | 변수 | 기본값 | 뜻 |
 |---|---|---|
@@ -149,7 +149,7 @@ cd /data/hackathon/deploy && PHOTO_DIR=/data/test npm run check:model -- --count
 | 폴더 | 내용 |
 |---|---|
 | `web/` | 화면 (HTML, CSS, ES 모듈, 빌드 없음) |
-| `server/` | 웹 서버, SITL 제어, 모델 호출, 점검 기록 |
+| `server/` | 웹 서버, 설정(`config.mjs`), SITL 제어, 모델 호출, 점검 기록 |
 | `drone/` | 비행 프로그램, 연결 시험 스크립트, 저장된 비행 기록 |
 | `sitl/` | SITL 안내와 설정 예시 |
 | `brand/` | SunPatch 로고 (아이콘·가로형, SVG와 PNG) |
