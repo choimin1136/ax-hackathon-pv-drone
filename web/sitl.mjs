@@ -228,7 +228,7 @@ function setMessage(text, isError = false) {
 }
 async function loadLive(follow) {
   const response = await fetch('./api/missions/live');
-  if (!response.ok) { if (!flight) showFlight(null, '드론 비행 없음'); return; }
+  if (!response.ok) { if (!flight) showFlight(null, '비행 대기'); return; }
   const next = await response.json();
   if (!next.positions.length) return;
   next.speedup = status?.speedup ?? 1;
@@ -338,16 +338,16 @@ async function applyMode(next) {
   reflight = null; routeKey = ''; missionKey = ''; liveKey = '';
   clearInterval(pollId);
   document.querySelector('.simulation-note').innerHTML = NOTES[next];
-  showFlight(next === 'demo' ? record : null, next === 'demo' ? '드론 비행 기록' : '드론 비행 없음');
+  showFlight(next === 'demo' ? record : null, next === 'demo' ? '드론 비행 기록' : '비행 대기');
   clearFacts();
   scene.setTime(0);
   document.dispatchEvent(new CustomEvent('mission:set', { detail: { reset: true } }));
   if (next === 'live') {
     showError(null);
     stageSince = Date.now(); stageKey = ''; wasFlying = false;
+    // Opening the page starts ready for a new mission; a flight already in the air is picked up by poll().
+    // Earlier flights stay in the inspection records.
     await poll();
-    const { missions } = await fetch('./api/missions').then(response => response.json()).catch(() => ({ missions: [] }));
-    if (missions.includes('live')) await loadLive(false).catch(() => {});
     if (mode !== 'live') return;
     pollId = setInterval(poll, POLL_MS);
   } else {
