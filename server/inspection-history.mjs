@@ -16,7 +16,7 @@ export function createInspectionHistory({file,flightDir}) {
       let rows,info;try{info=await stat(path.join(flightDir,name));rows=(await readFile(path.join(flightDir,name),'utf8')).split('\n').flatMap(line=>{try{return [JSON.parse(line)];}catch{return [];}});}catch{continue;}
       const start=rows.find(r=>r.type==='mission_start');if(!start)continue;
       const id=createHash('sha256').update(name+':'+info.birthtimeMs+':'+JSON.stringify(start)).digest('hex').slice(0,32);
-      const existing=records.find(r=>r.id===id);if(existing?.phase==='complete')continue;
+      const existing=records.find(r=>r.id===id);if(existing?.deletedAt || existing?.phase==='complete')continue;
       const targets=[...new Set((start.cells??[]).filter(id=>CELL_IDS.includes(id)))];
       const visited=[...new Set(rows.filter(r=>r.type==='frame'&&targets.includes(r.cell_id)).map(r=>r.cell_id))];
       const end=rows.find(r=>r.type==='mission_end');
@@ -33,16 +33,24 @@ export function createInspectionHistory({file,flightDir}) {
     if(changed)await save(records);return records;
   }
   return {
-    list:()=>run(async()=>ingest(await load())),
+    list:()=>run(async()=>(await ingest(await load())).filter(r=>!r.deletedAt)),
+    remove:id=>run(async()=>{
+      const records=await ingest(await load()),record=records.find(r=>r.id===id&&!r.deletedAt);
+      if(!record)throw Object.assign(Error('record not found'),{status:404});
+      if(['running','paused'].includes(record.phase))throw Object.assign(Error('flight still running'),{status:409});
+      // Keep a tombstone so the source flight cannot reappear on the next scan.
+      record.deletedAt=new Date().toISOString();
+      await save(records);return records.filter(r=>!r.deletedAt);
+    }),
     review:(id,cellId,candidateId,decision)=>run(async()=>{
       if(!['approved','excluded','pending'].includes(decision))throw Object.assign(Error('invalid decision'),{status:400});
       const records=await ingest(await load()),record=records.find(r=>r.id===id);
-      if(!record||!record.targets.includes(cellId)||!record.visited.includes(cellId))throw Object.assign(Error('record or visited cell not found'),{status:404});
+      if(!record||record.deletedAt||!record.targets.includes(cellId)||!record.visited.includes(cellId))throw Object.assign(Error('record or visited cell not found'),{status:404});
       if(['running','paused'].includes(record.phase))throw Object.assign(Error('flight still running'),{status:409});
       const cell=record.cells.find(c=>c.cell_id===cellId),candidate=cell?.candidates.find(c=>c.id===candidateId);
       if(!candidate)throw Object.assign(Error('candidate not found'),{status:404});
       candidate.decision=decision;cell.confirmed_count=cell.candidates.filter(c=>c.decision==='approved').length;
-      await save(records);return records;
+      await save(records);return records.filter(r=>!r.deletedAt);
     })
   };
 }

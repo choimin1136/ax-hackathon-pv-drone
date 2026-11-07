@@ -85,8 +85,9 @@ export function createReinspection({ getCells, getSummary, getRecords=()=>[], is
     confirmed=false;clearFlight();onFlightChange();
   };
   function render() {
+    if(sourceId&&!sourceRecord()) {sourceId='';if(!busy()){selected.clear();confirmed=false;clearFlight();}}
     const select=root.querySelector('[data-history-source]');
-    const records=getRecords().filter(r=>!['running','paused'].includes(r.phase)&&r.visited.length).reverse();
+    const records=getRecords().filter(r=>!['running','paused'].includes(r.phase)&&r.visited.length).sort((a,b)=>Date.parse(b.startedAt)-Date.parse(a.startedAt)||a.id.localeCompare(b.id));
     const signature=records.map(r=>r.id).join(',');
     if(select.dataset.records!==signature){
       select.replaceChildren(new Option('사용자 지정',''),...records.map(r=>new Option(formatStarted(r.startedAt)+' · '+(r.kind==='selection'?'재점검':'전체 점검'),r.id)));
@@ -184,6 +185,7 @@ export function createReinspection({ getCells, getSummary, getRecords=()=>[], is
   root.querySelector('[data-flight-reset]').onclick = () => { clearFlight(); onFlightChange(); };
   root.querySelector('[data-speed]').onchange = schedule;
   document.addEventListener('dashboard:viewchange',event=>{if(event.detail.id==='reinspection')render();});
+  document.addEventListener('inspection-history:review',render);
   return {
     render,
     referenceCells:()=>sourceRecord()?.cells,

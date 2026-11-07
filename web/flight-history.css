@@ -2,6 +2,22 @@
 #activity.flight-history #events li:not(.empty-event){display:block;padding:0}
 .flight-history-row{display:grid;grid-template-columns:minmax(190px,240px) 88px minmax(0,1fr);gap:16px;width:100%;padding:15px 14px;border:0;background:transparent;text-align:left;color:inherit;font:inherit;border-radius:0}
 .flight-history-row:hover{background:#f5f7fb}.flight-history-row:focus-visible{outline:2px solid #6366f1;outline-offset:-2px}
+#activity.flight-history #events li:not(.empty-event){position:relative;}
+.flight-history-row{padding-right:74px;}
+.history-delete{position:absolute;right:12px;top:50%;transform:translateY(-50%);opacity:0;pointer-events:none;border:1px solid #efc9cc;border-radius:7px;background:#fff;color:#b33c48;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer;}
+#events li:hover .history-delete,#events li:focus-within .history-delete{opacity:1;pointer-events:auto;}
+.history-delete:hover:not(:disabled){background:#fff0f1;}
+.history-delete:focus-visible{outline:2px solid #b33c48;outline-offset:2px;}
+.history-delete:disabled{cursor:not-allowed;}
+@media(hover:none){.history-delete{opacity:1;pointer-events:auto;}}
+.history-delete-dialog{width:min(420px,90vw);border:1px solid var(--line);border-radius:16px;padding:24px;color:var(--ink);background:#fff;box-shadow:0 20px 70px #142b5030;}
+.history-delete-dialog::backdrop{background:#142b5060;}
+.history-delete-dialog h2{margin-top:0;font-size:20px;}
+.history-delete-dialog p{line-height:1.7;}
+.history-delete-dialog form{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+.history-delete-dialog button{padding:9px 16px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#52617a;cursor:pointer;}
+.history-delete-dialog .history-delete-confirm{background:#b33c48;color:#fff;border-color:#b33c48;}
+@media(max-width:650px){.flight-history-row{padding-right:60px;}.history-delete{right:5px;padding-inline:7px;}}
 .flight-history-note{font-size:12px;color:#8490a5;margin:12px 0 0}
 .flight-history-map{overflow:auto;flex:1;min-height:0}
 .flight-history-map .map-surface{display:block!important}

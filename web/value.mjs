@@ -76,7 +76,7 @@ export function createValueResults({ getRecords }) {
   }
   const format = value => value.toLocaleString('ko-KR', {maximumFractionDigits:2});
   function render() {
-    const records=getRecords().filter(r=>!['running','paused'].includes(r.phase)).sort((a,b)=>b.startedAt.localeCompare(a.startedAt));
+    const records=getRecords().filter(r=>!['running','paused'].includes(r.phase)).sort((a,b)=>Date.parse(b.startedAt)-Date.parse(a.startedAt)||a.id.localeCompare(b.id));
     const select=root.querySelector('[data-analysis-source]');
     if(!records.some(r=>r.id===selectedId))selectedId=records[0]?.id??'';
     select.replaceChildren();
