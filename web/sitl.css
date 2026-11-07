@@ -104,6 +104,8 @@
 .thermal-card.has-image .thermal-empty {display:none;}
 .thermal-caption {min-height:18px;margin:8px 2px 0;font-size:12px;color:var(--muted);}
 .thermal-caption[data-status="check"] {color:#c63038;font-weight:600;}
+/* Empty status lines should not leave a blank strip below the content. */
+.thermal-caption:empty,.sim-message:empty {display:none;}
 
 /* Stack the overview before its map and controls become too narrow. */
 @media(max-width:1250px) {
@@ -129,13 +131,16 @@
 /* Match the initial map and primary-card bottoms without stretching the photo. */
 #overview .overview-primary-cards {display:contents;}
 @media(min-width:1251px) {
+  /* Keep the final log card above the same bottom inset as the sticky map. */
+  body>#main:has(#overview:not([hidden])) {padding-bottom:16px;}
   #overview {--primary-card-height:max(620px,calc(100dvh - 104px));}
   #overview .map-card {height:var(--primary-card-height);}
   #overview .overview-primary-cards {display:grid;height:var(--primary-card-height);grid-template-rows:minmax(min-content,.9fr) minmax(250px,1fr);gap:14px;}
-  #overview .overview-primary-cards>.mission-card {display:flex;flex-direction:column;}
-  #overview .overview-primary-cards .mission-copy {flex:1;display:flex;align-items:center;}
-  #overview .overview-primary-cards .live-controls {margin-top:auto;}
-  #overview .overview-primary-cards>.thermal-card {display:flex;flex-direction:column;min-height:0;}
+  #overview .overview-primary-cards>.mission-card {display:flex;flex-direction:column;padding:20px;}
+  #overview .overview-primary-cards .mission-copy {flex:1;display:flex;align-items:center;margin-block:16px;}
+  #overview .overview-primary-cards .live-controls {margin:16px 0 0;}
+  #overview .overview-primary-cards>.thermal-card {display:flex;flex-direction:column;min-height:0;padding:20px;}
+  #overview .thermal-card .collapse-head {margin-bottom:12px;align-items:center;}
   #overview .thermal-card .collapse-head,#overview .thermal-caption {flex:none;}
   #overview .thermal-frame {flex:1;min-height:0;aspect-ratio:auto;}
   #overview .thermal-frame img {object-fit:contain;}
