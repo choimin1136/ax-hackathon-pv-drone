@@ -1,8 +1,17 @@
 import { CELL_IDS, ROUTE, STATUS, createMission, startMission, pauseMission, tickMission, summarize } from './mission.mjs';
+import {createDetail} from './detail.mjs';
 const $ = id => document.getElementById(id);
 let state = createMission();
 let selected = 'A-1';
 let timer;
+const detail = createDetail({getCell:id=>state.cells.find(c=>c.cell_id===id),onChange:(id,counts)=>{
+  state={...state,cells:state.cells.map(c=>c.cell_id===id?{...c,confirmed_count:counts.approved}:c)};
+  render();
+}});
+const detailButton=document.createElement('button');
+detailButton.type='button';detailButton.className='primary';detailButton.textContent='이미지 · 후보 확인';
+detailButton.onclick=()=>detail.open(selected);
+document.querySelector('.detail-card').append(detailButton);
 const clock = seconds => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 const cells = new Map();
 for (const id of CELL_IDS) {
@@ -59,6 +68,10 @@ function render() {
   $('detail-status').textContent = state.activeId === selected ? '분석 중 · 예시' : STATUS[cell.status].label;
   $('detail-candidates').textContent = cell.status === 'pending' || cell.status === 'retake' ? '—' : `${cell.candidate_count}개 · 예시`;
   $('detail-action').textContent = state.activeId === selected ? '예시 분석을 진행하고 있습니다.' : cell.status === 'pending' && state.phase !== 'idle' ? '이 구역은 점검 순서를 기다리고 있습니다.' : STATUS[cell.status].action;
+  const counts=detail.summary(cell);
+  document.querySelector('.detail-card dl>div:last-child dd').textContent=cell.candidate_count?`승인 ${counts.approved} · 제외 ${counts.excluded} · 미확인 ${counts.pending}`:'확인할 후보 없음';
+  document.querySelector('.detail-foot').textContent='합성 이미지와 후보 확인 · 저장은 현재 미션에만 적용';
+  detail.refresh();
   $('events').replaceChildren();
   if (!state.events.length) {
     const li = document.createElement('li');
@@ -87,11 +100,13 @@ function schedule() {
   }, 1000 / Number($('speed').value));
 }
 $('play').addEventListener('click', () => {
+  if(state.phase==='complete') detail.reset();
   state = state.phase === 'running' ? pauseMission(state) : startMission(state);
   $('announcement').textContent = state.phase === 'running' ? '예시 미션을 재생합니다.' : '예시 미션을 일시정지했습니다.';
   render(); schedule();
 });
 $('reset').addEventListener('click', () => {
+  detail.reset();
   clearInterval(timer); state = createMission(); selected = 'A-1'; render();
   $('announcement').textContent = '미션이 처음 상태로 돌아갔습니다.';
 });
