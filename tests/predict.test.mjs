@@ -6,11 +6,13 @@ import path from 'node:path';
 import { createPredictor } from '../server/predict.mjs';
 import { createApp } from '../server/index.mjs';
 import { missionFromFlight } from '../web/mission.mjs';
+import { candidatesFor } from '../web/review.mjs';
 
 const answer = hot => ({ probability: hot ? 0.76 : 0.003, is_hotspot: hot, decision_threshold: 0.5, calibrated: false,
-  result: { image_id: hot ? 'pos' : 'neg', prediction: { decision_status: hot ? 'hotspot_localized' : 'low_confidence_candidate' } },
+  result: { image_id: hot ? 'pos' : 'neg', prediction: { decision_status: hot ? 'hotspot_localized' : 'low_confidence_candidate' },
+    localization: { image_size: [640, 512], regions: hot ? [{ bbox_xywh: [154, 74, 10, 6], area_px: 49, mean_segmentation_score: 0.78 }, { bbox_xywh: [389, 143, 3, 2], area_px: 6, mean_segmentation_score: 0.55 }] : [] } },
   bboxes: hot ? [{ cx: 159, cy: 77, w: 10, h: 6, label: 1 }, { cx: 390, cy: 143, w: 3, h: 2, label: 1 }] : [],
-  mask_png_base64: 'x', output: 'data:image/jpeg;base64,AAAA' });
+  mask_png_base64: 'x', output: 'data:image/jpeg;charset=utf-8;base64,/9j/AA==' });
 
 async function withPhotos(names, run) {
   const dir = await mkdtemp(path.join(tmpdir(), 'photos-'));
@@ -25,7 +27,7 @@ test('sends the cell photo to the model once and returns a short result', () => 
   const predictor = createPredictor({ env: { PHOTO_DIR: dir, MODEL_URL: 'http://model/predict' }, fetchImpl, random: () => draw });
   assert.deepEqual(await predictor.status(), { configured: true, photos: 3 });
   const hot = await predictor.predict('A-1');
-  assert.deepEqual({ ...hot, output: Boolean(hot.output) }, { cell_id: 'A-1', photo: 'A-1.jpg', image_id: 'pos', is_hotspot: true, probability: 0.76, threshold: 0.5, calibrated: false, decision_status: 'hotspot_localized', regions: [{ cx: 159, cy: 77, w: 10, h: 6 }, { cx: 390, cy: 143, w: 3, h: 2 }], output: true });
+  assert.deepEqual({ ...hot, output: Boolean(hot.output) }, { cell_id: 'A-1', photo: 'A-1.jpg', image_id: 'pos', is_hotspot: true, probability: 0.76, threshold: 0.5, calibrated: false, decision_status: 'hotspot_localized', image_size: [640, 512], regions: [{ bbox: [154, 74, 10, 6], area_px: 49, score: 0.78 }, { bbox: [389, 143, 3, 2], area_px: 6, score: 0.55 }], output: true });
   assert.equal((await predictor.predict('A-2')).photo, 'a.jpg');
   assert.equal((await predictor.predict('A-3')).photo, 'b.png');
   await predictor.predict('A-1');
@@ -78,3 +80,20 @@ test('finds photos in AI Hub style subfolders and skips label files', () => with
   assert.equal((await predictor.predict('A-2')).photo, path.join('TS_Positive', 'p1.jpg'));
   assert.deepEqual(sent, ['n1.jpg', 'p1.jpg']);
 }));
+
+test('the detail view reads back only listed photos and the model overlay', () => withPhotos(['TS_Positive/p1.jpg', 'notes.txt'], async dir => {
+  const predictor = createPredictor({ env: { PHOTO_DIR: dir }, fetchImpl: async () => new Response(JSON.stringify(answer(true))) });
+  const photo = await predictor.photo(path.join('TS_Positive', 'p1.jpg'));
+  assert.deepEqual([photo.type, String(photo.data)], ['image/jpeg', path.join('TS_Positive', 'p1.jpg')]);
+  const overlay = await predictor.overlay(path.join('TS_Positive', 'p1.jpg'));
+  assert.deepEqual([overlay.type, [...overlay.data.subarray(0, 2)]], ['image/jpeg', [0xff, 0xd8]]);
+  for (const name of ['notes.txt', '../secret.jpg', path.join(dir, 'TS_Positive', 'p1.jpg'), null]) assert.equal(await predictor.photo(name), null, String(name));
+}));
+
+test('a model-judged cell lists the model regions as candidates with stable ids', () => {
+  const cell = { cell_id: 'B-2', status: 'check', candidate_count: 2, model: { photo: 'p.jpg', regions: [{ bbox: [154, 74, 10, 6], area_px: 49, score: 0.78 }, { bbox: [1, 2, 3, 4], area_px: 12, score: 0.6 }] } };
+  assert.deepEqual(candidatesFor(cell), [{ id: 'B-2-h1', bbox: [154, 74, 10, 6], area_px: 49, score: 0.78 }, { id: 'B-2-h2', bbox: [1, 2, 3, 4], area_px: 12, score: 0.6 }]);
+  const mission = missionFromFlight(['B-2'], null, false, true, 3, () => ['check', 2, cell.model]);
+  assert.deepEqual(mission.cells.find(c => c.cell_id === 'B-2').model, cell.model);
+  assert.equal(candidatesFor({ cell_id: 'A-1', candidate_count: 1 })[0].id, 'A-1-h1');
+});

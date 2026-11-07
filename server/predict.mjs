@@ -55,19 +55,31 @@ export function createPredictor({ env = process.env, fetchImpl = fetch, random =
   async function status() {
     return { configured: Boolean(photoDir), photos: (await photos()).length };
   }
-  async function predict(cellId) {
-    if (!CELL.test(cellId)) return { status: 400, error: 'invalid cell' };
-    const name = await photoFor(cellId);
-    if (!name) return { status: 503, error: 'no photos' };
+  // The same photo always gives the same answer, so results are kept per photo.
+  async function modelAnswer(name) {
     const { mtimeMs } = await stat(path.join(photoDir, name));
-    // The same photo always gives the same answer, so results are kept per photo.
     const key = `${name}:${mtimeMs}`;
     if (!cache.has(key)) {
       // Failed calls are not cached, so the next arrival tries again.
       cache.set(key, call(name).catch(error => { cache.delete(key); throw error; }));
     }
+    return cache.get(key);
+  }
+  // Only photos listed from PHOTO_DIR can be read back, so a request cannot reach other files.
+  async function known(name) {
+    return typeof name === 'string' && (await photos()).includes(name) ? name : null;
+  }
+  function regionsOf(body) {
+    const regions = body.result?.localization?.regions;
+    if (Array.isArray(regions)) return regions.map(r => ({ bbox: r.bbox_xywh, area_px: r.area_px, score: r.mean_segmentation_score }));
+    return (body.bboxes ?? []).map(({ cx, cy, w, h }) => ({ bbox: [Math.round(cx - w / 2), Math.round(cy - h / 2), w, h], area_px: w * h, score: null }));
+  }
+  async function predict(cellId) {
+    if (!CELL.test(cellId)) return { status: 400, error: 'invalid cell' };
+    const name = await photoFor(cellId);
+    if (!name) return { status: 503, error: 'no photos' };
     try {
-      const body = await cache.get(key);
+      const body = await modelAnswer(name);
       const prediction = body.result?.prediction ?? {};
       return {
         cell_id: cellId,
@@ -78,7 +90,8 @@ export function createPredictor({ env = process.env, fetchImpl = fetch, random =
         threshold: body.decision_threshold,
         calibrated: Boolean(body.calibrated),
         decision_status: prediction.decision_status ?? null,
-        regions: (body.bboxes ?? []).map(({ cx, cy, w, h }) => ({ cx, cy, w, h })),
+        image_size: body.result?.localization?.image_size ?? [640, 512],
+        regions: regionsOf(body),
         output: typeof body.output === 'string' && body.output.startsWith('data:image/') ? body.output : null
       };
     } catch (error) {
@@ -86,5 +99,20 @@ export function createPredictor({ env = process.env, fetchImpl = fetch, random =
       return { status: 502, error: 'model unavailable' };
     }
   }
-  return { status, predict, shuffle };
+  // The original photo of a past or current result, for the cell detail view.
+  async function photo(name) {
+    const found = await known(name);
+    if (!found) return null;
+    return { type: found.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg', data: await readFile(path.join(photoDir, found)) };
+  }
+  // The model's overlay image (hotspots painted on the photo) for the same photo.
+  async function overlay(name) {
+    const found = await known(name);
+    if (!found) return null;
+    try {
+      const match = /^data:(image\/[a-z]+)[^,]*;base64,(.*)$/s.exec((await modelAnswer(found)).output ?? '');
+      return match ? { type: match[1], data: Buffer.from(match[2], 'base64') } : null;
+    } catch { return null; }
+  }
+  return { status, predict, shuffle, photo, overlay };
 }

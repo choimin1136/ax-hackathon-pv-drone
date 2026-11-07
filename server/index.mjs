@@ -100,6 +100,14 @@ export function createApp({ webRoot = DEFAULT_WEB, flightDir = DEFAULT_FLIGHTS, 
 
     if (pathname === '/api/health') return sendJson(res, 200, { ok: true }, head);
     if (pathname === '/api/predict') return sendJson(res, 200, await predictor.status(), head);
+    if (pathname === '/api/photo' || pathname === '/api/overlay') {
+      const name = new URL(req.url, 'http://localhost').searchParams.get('name');
+      const image = await (pathname === '/api/photo' ? predictor.photo : predictor.overlay)(name);
+      if (!image) return sendJson(res, 404, { error: 'image not found' }, head);
+      res.writeHead(200, { 'Content-Type': image.type, 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff' });
+      res.end(head ? undefined : image.data);
+      return;
+    }
     const cell = pathname.match(/^\/api\/predict\/([^/]+)$/);
     if (cell) {
       const result = await predictor.predict(cell[1]);

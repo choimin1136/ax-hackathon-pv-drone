@@ -1,4 +1,5 @@
 .media-controls {display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;margin-bottom:12px;}
+.media-controls[hidden] {display:none;}
 .media-controls select {max-width:100%;padding:8px;}
 .media-stage {position:relative;aspect-ratio:640/512;background:#382f50;border-radius:8px;overflow:hidden;}
 .media-stage[hidden] {display:none;}
