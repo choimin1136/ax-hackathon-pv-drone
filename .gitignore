@@ -1,0 +1,17 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Data
+data/
+*.zip
+
+# Environment
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+node_modules/
