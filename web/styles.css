@@ -1020,3 +1020,15 @@ footer {
 .reflight-panel li {padding:6px 12px;margin-right:16px;}
 .reflight-panel li[aria-current] {background:#d7f77b;border-radius:8px;font-weight:700;}
 .reflight-panel label {display:flex;align-items:center;gap:8px;font-size:13px;}
+
+.value-results fieldset {border:1px solid var(--line);border-radius:10px;padding:20px;margin:20px 0;}
+.value-fields {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:12px 0 20px;}
+.value-fields label {font-size:12px;line-height:1.7;display:flex;flex-direction:column;gap:6px;}
+.value-fields input {width:100%;min-width:0;border:1px solid #a7baa9;border-radius:6px;padding:10px;background:white;color:#203832;}
+.value-results button {padding:10px;border:1px solid #a7baa9;border-radius:6px;background:#f3f7ef;}
+.value-scenarios {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;}
+.value-scenarios article {background:#f3f7ef;border-radius:12px;padding:20px;overflow-wrap:anywhere;}
+.value-scenarios h3 {font-size:16px;}.value-scenarios dl {margin:0;}.value-scenarios dl>div {margin-top:18px;}
+.value-scenarios dt {font-size:12px;color:#54695d;}.value-scenarios dd {font-size:18px;font-weight:600;margin:6px 0 0;}
+.value-results details {margin-top:20px;font-size:13px;line-height:1.9;}.value-results [data-value-error] {color:#a42c23;}
+@media(max-width:700px) {.value-fields {grid-template-columns:repeat(2,minmax(0,1fr));}.value-scenarios {grid-template-columns:1fr;}.value-results fieldset {padding:12px;}}
