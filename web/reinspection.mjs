@@ -67,9 +67,14 @@ export function createReinspection({ getCells, getSummary, getRecords=()=>[], is
     input.type = 'checkbox';
     input.setAttribute('aria-label', `${cell.cell_id} 선택 점검`);
     const text = document.createElement('span');
+    text.className = 'selection-cell-text';
+    const cellName = document.createElement('strong');
+    cellName.textContent = cell.cell_id;
+    const cellReason = document.createElement('small');
+    text.append(cellName, cellReason);
     label.append(input, text);
     root.querySelector('.reinspection-grid').append(label);
-    rows.set(cell.cell_id, { label, input, text });
+    rows.set(cell.cell_id, { label, input, text, cellReason });
     input.onchange = () => {
       if (input.checked) selected.add(cell.cell_id); else selected.delete(cell.cell_id);
       confirmed = false;
@@ -102,7 +107,8 @@ export function createReinspection({ getCells, getSummary, getRecords=()=>[], is
       row.input.disabled = busy();
       row.input.checked = selected.has(cell.cell_id);
       row.label.classList.toggle('is-selected', row.input.checked);
-      row.text.textContent = `${cell.cell_id} · ${cell.status === 'pending' ? '직접 선택 가능' : reason || '직접 선택 가능'}`;
+      row.cellReason.textContent = cell.status === 'pending' ? '' : reason || '';
+      row.cellReason.hidden = !row.cellReason.textContent;
     }
     const targets = selectedTargets(cells, selected);
     root.querySelector('[data-clear]').disabled = busy() || !targets.length;

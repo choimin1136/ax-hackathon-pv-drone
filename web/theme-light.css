@@ -287,7 +287,10 @@ body #main>footer {display:none;}
 #reinspection .reinspection-actions {gap:8px;margin:12px 0;}
 #reinspection .reinspection-actions button {padding:8px 10px;font-size:12px;min-height:36px;}
 #reinspection .reinspection-grid {grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;}
-#reinspection .reinspection-grid label {padding:7px;gap:6px;min-height:44px;font-size:11px;line-height:1.4;}
+#reinspection .reinspection-grid label {padding:8px 10px;gap:10px;min-height:52px;font-size:11px;line-height:1.4;}
+#reinspection .selection-cell-text {display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0;}
+#reinspection .selection-cell-text strong {font-size:12px;font-weight:600;}
+#reinspection .selection-cell-text small {font-size:10px;word-break:keep-all;overflow-wrap:anywhere;}
 #reinspection [data-selection],#reinspection [data-result] {margin:9px 0;font-size:11px;line-height:1.5;}
 #reinspection [data-confirm] {padding:10px;min-height:38px;font-size:12px;}
 #reinspection .reflight-panel>p {color:#62738b;}
