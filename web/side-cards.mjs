@@ -41,7 +41,7 @@ export function createThermalCard({ onOpen }) {
   card.className = 'thermal-card';
   card.setAttribute('aria-label', '최근 촬영 열화상');
   card.innerHTML = `<div class="sitl-log-title"><h3>촬영 이미지</h3><span data-source>합성 예시</span></div>
-    <button class="thermal-frame" type="button" disabled><img data-photo alt=""><img data-mask alt="" aria-hidden="true"><span class="thermal-empty">드론이 구역에 도착하면 열화상이 표시됩니다.</span></button>
+    <button class="thermal-frame" type="button" disabled><span class="thermal-shot"><img data-photo alt=""><img data-mask alt="" aria-hidden="true"></span><span class="thermal-empty">드론이 구역에 도착하면 열화상이 표시됩니다.</span></button>
     <p class="thermal-caption" role="status"></p>`;
   const frame = card.querySelector('.thermal-frame'), photo = card.querySelector('[data-photo]'), mask = card.querySelector('[data-mask]');
   const caption = card.querySelector('.thermal-caption'), source = card.querySelector('[data-source]'), empty = card.querySelector('.thermal-empty');
