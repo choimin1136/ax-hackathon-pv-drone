@@ -1,7 +1,7 @@
 import { routeFlight } from './flight.mjs';
 import { createScene, createViewToggle, followRoute } from './flight-scene.mjs';
 
-const TILE_COLORS = { outside: '#a9b6c8', target: '#3a68a8', done: '#087d57' };
+const TILE_COLORS = { outside: '#172d46', target: '#3a68a8', done: '#087d57' };
 
 const card = document.querySelector('.reflight-map-card');
 const speedSelect = document.querySelector('#reinspection [data-speed]');
