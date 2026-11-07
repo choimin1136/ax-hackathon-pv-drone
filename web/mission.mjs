@@ -33,11 +33,15 @@ export function tickMission(state) {
   const event = { cell_id: id, status, elapsed, candidate_count };
   return { ...state, elapsed, index, activeId: null, phase: index === ROUTE.length ? 'complete' : 'running', cells: state.cells.map(cell => cell.cell_id === id ? { ...cell, status, candidate_count } : cell), events: [event, ...state.events] };
 }
-// Builds the same mission state from a real flight, so cells show their example result once the drone has arrived.
-export function missionFromFlight(visited, activeId, finished, flying, elapsed = 0) {
+// Builds the same mission state from a real flight, so cells show their result once the drone has arrived.
+// resultOf gives a cell's [status, candidate_count] (for example from the hotspot model); null keeps the cell pending
+// while its result is on the way. Without it, the example results are used.
+export const exampleResult = cell_id => examples[cell_id] ?? ['no_candidate', 0];
+export function missionFromFlight(visited, activeId, finished, flying, elapsed = 0, resultOf = exampleResult) {
   const done = new Set(visited.filter(id => id !== activeId));
-  const events = [...done].reverse().map(cell_id => {
-    const [status, candidate_count] = examples[cell_id] ?? ['no_candidate', 0];
+  const results = new Map([...done].map(cell_id => [cell_id, resultOf(cell_id)]));
+  const events = [...done].reverse().filter(cell_id => results.get(cell_id)).map(cell_id => {
+    const [status, candidate_count] = results.get(cell_id);
     return { cell_id, status, elapsed, candidate_count };
   });
   return {
@@ -46,8 +50,9 @@ export function missionFromFlight(visited, activeId, finished, flying, elapsed =
     activeId,
     elapsed,
     cells: CELL_IDS.map(cell_id => {
-      if (!done.has(cell_id)) return { cell_id, status: 'pending', candidate_count: 0, confirmed_count: 0 };
-      const [status, candidate_count] = examples[cell_id] ?? ['no_candidate', 0];
+      const result = results.get(cell_id);
+      if (!result) return { cell_id, status: 'pending', candidate_count: 0, confirmed_count: 0 };
+      const [status, candidate_count] = result;
       return { cell_id, status, candidate_count, confirmed_count: 0 };
     }),
     events
