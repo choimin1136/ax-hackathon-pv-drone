@@ -58,3 +58,15 @@
 #overview .side-column>* {flex:none;}
 #overview .mission-card {height:auto;max-height:none;min-height:0;overflow:visible;}
 .live-buttons {display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+/* The map stays in view while the right column scrolls with the page. */
+@media(min-width:1100px) {
+  #main>#overview,#main>#overview .workspace {height:auto;min-height:0;max-height:none;overflow:visible;}
+  #overview .workspace {align-items:start;}
+  #overview .map-card {position:sticky;top:88px;display:flex;flex-direction:column;height:calc(100dvh - 104px);min-height:480px;overflow:auto;}
+  #overview .map-card>* {flex:none;}
+  #overview #sitl {display:flex;flex:1 1 0;flex-direction:column;min-height:0;}
+  #overview #sitl>* {flex:none;}
+  #overview #sitl>.sitl-stage {flex:1 1 0;height:auto;min-height:200px;}
+  #overview .map-card[data-map-view="2d"] .map-surface {flex:1 1 auto;}
+  #overview .map-card[data-map-view="2d"] #sitl {display:none;}
+}

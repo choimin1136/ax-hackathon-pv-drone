@@ -29,7 +29,7 @@ function pkill() {
 
 // Starts and stops ArduPilot SITL and the mission program on the server. Paths are fixed by the operator's environment.
 export function createSitlControl({ flightDir, env = process.env, findSitl = pgrep, killSitl = pkill, probe = portOpen, sitlArgs }) {
-  const speedup = env.SITL_SPEEDUP ?? '5';
+  const speedup = env.SITL_SPEEDUP ?? '8';
   const sitlBin = env.SITL_BIN ?? `${ROOT}/ardupilot/build/sitl/bin/arducopter`;
   const sitlDefaults = env.SITL_DEFAULTS ?? `${ROOT}/ardupilot/Tools/autotest/default_params/copter.parm`;
   const sitlDir = env.SITL_DIR ?? `${ROOT}/sitl-run`;
