@@ -37,3 +37,15 @@ test('replacement, deletion, recreation and malformed files never return stale h
   await writeFile(file,'[{"id":"c"}]');assert.equal((await cache.load())[0].id,'c');
  }finally{await rm(dir,{recursive:true,force:true});}
 });
+
+test('a file this process just wrote is served from memory without another read',async()=>{
+ const dir=await mkdtemp(path.join(tmpdir(),'history-remember-')),file=path.join(dir,'history.json');
+ try{
+  let reads=0;const cache=createHistoryFileCache(file,{read:async(...args)=>{reads++;return readFile(...args);}});
+  const records=[{id:'a',cells:[{candidates:[{decision:'pending'}]}]}];
+  await writeFile(file,JSON.stringify(records));await cache.remember(records);
+  records[0].cells[0].candidates[0].decision='approved';
+  assert.equal((await cache.load())[0].cells[0].candidates[0].decision,'pending');assert.equal(reads,0);
+  await writeFile(file,'[{"id":"b"}]');assert.equal((await cache.load())[0].id,'b');assert.equal(reads,1);
+ }finally{await rm(dir,{recursive:true,force:true});}
+});

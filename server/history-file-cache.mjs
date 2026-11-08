@@ -9,12 +9,14 @@ function copyJson(value) {
 
 export function createHistoryFileCache(file,{read=readFile,inspect=stat}={}) {
   let cached=null;
+  const stampOf=async()=>{const info=await inspect(file,{bigint:true});return [info.dev,info.ino,info.size,info.mtimeNs,info.ctimeNs].join(':');};
   return {
     invalidate(){cached=null;},
+    // After this process wrote the file, keep what it wrote instead of reading and parsing it again.
+    async remember(records){try{cached={stamp:await stampOf(),records:copyJson(records)};}catch{cached=null;}},
     async load(){
       try{
-        const info=await inspect(file,{bigint:true});
-        const stamp=[info.dev,info.ino,info.size,info.mtimeNs,info.ctimeNs].join(':');
+        const stamp=await stampOf();
         if(!cached||cached.stamp!==stamp){
           const records=JSON.parse(await read(file,'utf8'));
           cached={stamp,records};

@@ -14,7 +14,8 @@ export function createInspectionHistory({file,flightDir}) {
   const load=()=>fileCache.load();
   async function save(records){
     try{await mkdir(path.dirname(file),{recursive:true});await writeFile(file+'.tmp',JSON.stringify(records),'utf8');await rename(file+'.tmp',file);}
-    finally{fileCache.invalidate();}
+    catch(error){fileCache.invalidate();throw error;}
+    await fileCache.remember(records);
   }
   // Flight files already ingested as finished (complete, interrupted or deleted) are not read again until they change.
   const settled=new Map();
