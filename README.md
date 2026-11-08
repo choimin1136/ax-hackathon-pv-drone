@@ -76,6 +76,34 @@
 - **모델:** SegFormer B1으로 핫스팟 영역을 찾고 이미지 판정 헤드가 핫스팟 여부를 냅니다. 구조와 학습 순서는 [모델 안내](model/README.md)에 있습니다.
 - **응답:** 이미지 점수(`probability`, 보정 전), 판정(`is_hotspot`), 영역(`bbox`, `area_px`, 영역 점수), 결과 이미지(`output`)를 돌려줍니다. 점수는 이미지 전체 점수이며 영역별 확률이 아닙니다. 온도, 원인, 발전 손실은 측정하지 않습니다.
 
+### 시연 사진 폴더 (`/data/test`)
+
+시연 비행에서 구역마다 배정하는 열화상 사진은 팀 서버의 `/data/test`에 있습니다. 약 4.0 GB라서 저장소와 제출본에는 넣지 않았습니다. AI Hub 데이터는 이용 약관상 재배포가 제한되므로, 필요하면 아래 출처에서 직접 내려받습니다.
+
+| 항목 | 내용 |
+|---|---|
+| 출처 | AI Hub [신재생 에너지 발전 설비 결함진단 멀티모달 데이터](https://aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=71923) · 태양광 패널 열화상 |
+| 용도 | 학습에 쓰지 않은 사진을 시연 비행의 구역별 촬영 사진으로 사용 |
+| 크기 | 약 4.0 GB · 사진 640×512 |
+| 사용 폴더 | `TS_SolarPanel_Normal_PanelFront/` 정상 패널 · `TS_SolarPanel_Positive_PanelFront/` 핫스팟 패널 |
+| 파일 이름 예 | `TS_SolarPanel_Normal_PanelFront/2025_Youngkwang_Normal_11619.jpg` |
+
+```text
+/data/test/
+├─ TS_SolarPanel_Normal_PanelFront/     정상 패널 열화상 (*.jpg)
+└─ TS_SolarPanel_Positive_PanelFront/   핫스팟 패널 열화상 (*.jpg)
+```
+
+- **읽는 방식:** 서버는 `PHOTO_DIR` 아래 하위 폴더까지 jpg·png 파일만 찾습니다. 다른 파일(라벨 등)이 함께 있어도 무시합니다. 사진 목록은 1분에 한 번만 다시 읽습니다.
+- **핫스팟 보장:** 경로에 `positive`(대소문자 무시, `HOTSPOT_PHOTO_PATTERN`)가 들어간 사진을 비행 앞쪽 한 구역에 배정합니다.
+- **다른 환경에서 재현:** AI Hub에서 데이터를 받아 정상·핫스팟 사진을 위 구조처럼 두 폴더에 나눠 넣고, `PHOTO_DIR`을 그 폴더로 지정합니다. 폴더 이름은 달라도 되지만 핫스팟 사진의 경로에는 `positive`가 들어가야 합니다.
+
+```bash
+PHOTO_DIR=/data/test MODEL_URL=<모델 서빙 주소>/predict node server/index.mjs
+```
+
+- **사진이 없을 때:** `PHOTO_DIR`을 지정하지 않으면 구역 판정은 예시 값, 사진은 합성 이미지로 표시해 화면과 비행은 그대로 확인할 수 있습니다.
+
 ### 초기 샘플 측정
 
 학습 완료 모델을 받기 전, 샘플 19장(정상 라벨 16장, 결함 라벨 3장)을 2026-11-06에 측정했습니다. **표본이 작아 경향만 참고할 수 있습니다.**
