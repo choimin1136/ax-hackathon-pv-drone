@@ -4,7 +4,7 @@ import {createDetail} from './detail.mjs';
 import {formatStarted} from './inspection-history-store.mjs';
 import {createServerHistoryStore} from './server-history-store.mjs';
 export function createFlightHistory({getCandidates}) {
-  const store=createServerHistoryStore(()=>{renderList();if(activeId&&!current()){detail.reset();backToList();}if(activeId){showMap(activeId);detail.loadReviews(current()?.cells.flatMap(c=>c.candidates)??[]);detail.refresh(true);}document.dispatchEvent(new CustomEvent('inspection-history:review'));});
+  const store=createServerHistoryStore(()=>{renderList();if(activeId&&!current()){detail.reset();backToList();}if(activeId){showMap(activeId);detail.loadReviews(current()?.cells.flatMap(c=>c.candidates)??[]);detail.refresh(true);}announce();});
   const root=document.getElementById('activity'),list=document.getElementById('events'),columns=root.querySelector('.event-columns');
   columns.innerHTML='<span>기록 시각 · 한국 시간</span><span>종류</span><span>점검 결과</span>';
   root.classList.add('flight-history');list.setAttribute('aria-label','비행별 점검 기록, 최신순');
@@ -26,10 +26,16 @@ export function createFlightHistory({getCandidates}) {
   document.body.append(deleteDialog);
   deleteDialog.addEventListener('close',()=>{const id=deleteId;deleteId=null;if(deleteDialog.returnValue==='delete'&&id)store.remove(id);});
   const current=()=>store.list().find(r=>r.id===activeId);
+  // Pages that summarise records (insight cards) take them from this event instead of fetching them again.
+  let loaded=false;
+  const snapshot=()=>({records:store.view(),error:store.error()});
+  const announce=()=>{loaded=true;document.dispatchEvent(new CustomEvent('inspection-history:review',{detail:snapshot()}));};
+  // A page that starts listening late asks for the records it missed.
+  document.addEventListener('inspection-history:request',()=>{if(loaded)document.dispatchEvent(new CustomEvent('inspection-history:records',{detail:snapshot()}));});
   const detail=createDetail({titleId:'history-review-title',archive:true,canReview:()=>!store.saving()&&!['running','paused'].includes(current()?.phase),getCell:id=>current()?.cells.find(c=>c.cell_id===id),onChange:id=>{
     const cell=current()?.cells.find(c=>c.cell_id===id);if(!cell)return;
     store.review(activeId,id,detail.candidates(cell));renderList();showMap(activeId);
-    document.dispatchEvent(new CustomEvent('inspection-history:review'));
+    announce();
   }});
   function drawRoute(){
     const grid=surface.querySelector('.cell-grid'),base=grid.getBoundingClientRect();
@@ -78,7 +84,17 @@ export function createFlightHistory({getCandidates}) {
     note.textContent=store.error()||'서버 공용 기록 · 파일 생성 시각(한국 시간) · 셀을 눌러 저장 결과 확인·승인·제외';
   }
   renderList();
-  store.refresh();setInterval(()=>store.refresh(),5000);
-  document.addEventListener('dashboard:viewchange',()=>store.refresh());
-  return {records:()=>store.list(),observe(){}};
+  // Reloading and re-rendering the history every few seconds made the live drone view stutter. The timer now runs only on
+  // pages that show saved records, and never during a flight; the records are read once when the flight ends.
+  const RECORD_VIEWS=new Set(['activity','reinspection','value-results']);
+  let view=location.hash.slice(1),flying=false;
+  const refresh=()=>{if(!flying)store.refresh();};
+  store.refresh();setInterval(()=>{if(RECORD_VIEWS.has(view))refresh();},5000);
+  document.addEventListener('dashboard:viewchange',event=>{view=event.detail.id;refresh();});
+  document.addEventListener('mission:change',event=>{
+    // Only 'running' counts: a live flight that stopped midway stays 'paused' and must not block reloads forever.
+    const next=event.detail.phase==='running'||event.detail.reflight?.phase==='running';
+    if(flying&&!next){flying=false;store.refresh();}else flying=next;
+  });
+  return {records:()=>store.view(),observe(){}};
 }

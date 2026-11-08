@@ -18,7 +18,9 @@ export function createServerHistoryStore(onChange) {
     }finally{refreshing=false;}
   }
   return {
-    list:()=>structuredClone(records),error:()=>error,saving:()=>saving,refresh,
+    // list() is a private copy for screens that edit candidate decisions. view() is the shared, read-only array for
+    // screens that only read; deep-copying the whole history on every read stalled the live flight view.
+    list:()=>structuredClone(records),view:()=>records,error:()=>error,saving:()=>saving,refresh,
     async remove(id){
       if(saving)return;
       revision++;saving=true;error='서버 기록을 삭제 중입니다.';onChange();

@@ -42,20 +42,22 @@ function renderWeather() {
   section.querySelector('[data-weather]').innerHTML = `<ul class="weather-row">${days.map(day => `<li class="${day === best ? 'best' : ''}"><span>${formatDay(day.date)}</span><b>${day.sky}</b><small>바람 ${day.wind}m/s</small></li>`).join('')}</ul>${best ? `<p class="preview-meta">추천: ${formatDay(best.date)} · ${best.sky}, 바람 ${best.wind}m/s</p>` : ''}`;
 }
 
-// The weather card needs no records, so it is drawn first; a slow history request shows a message instead of blank cards.
-async function refresh() {
+// Records come from the shared history store (inspection-history:review) instead of a second request of their own.
+// The weather card needs no records, so it is drawn first.
+let latest = null;
+function render() {
   renderWeather();
   const priority = section.querySelector('[data-priority]'), trend = section.querySelector('[data-trend]');
-  if (!priority.innerHTML) priority.innerHTML = trend.innerHTML = empty('점검 기록을 불러오는 중입니다…');
-  try {
-    const response = await fetch('./api/inspection-history', { signal: AbortSignal.timeout(15000) });
-    if (!response.ok) throw Error(response.status);
-    const { records } = await response.json();
-    renderPriority(records ?? []); renderTrend(records ?? []);
-  } catch {
-    priority.innerHTML = trend.innerHTML = empty('점검 기록을 불러오지 못했습니다. 잠시 후 다시 열어 주세요.');
-  }
+  if (!latest) { priority.innerHTML = trend.innerHTML = empty('점검 기록을 불러오는 중입니다…'); return; }
+  if (latest.error && !latest.records.length) { priority.innerHTML = trend.innerHTML = empty(latest.error); return; }
+  renderPriority(latest.records); renderTrend(latest.records);
 }
-document.addEventListener('dashboard:viewchange', event => { if (event.detail.id === 'value-results') refresh(); });
-document.addEventListener('inspection-history:review', refresh);
-refresh();
+const receive = event => {
+  if (event.detail?.records) latest = { records: event.detail.records, error: event.detail.error ?? '' };
+  render();
+};
+document.addEventListener('inspection-history:review', receive);
+document.addEventListener('inspection-history:records', receive);
+document.addEventListener('dashboard:viewchange', event => { if (event.detail.id === 'value-results') render(); });
+render();
+document.dispatchEvent(new CustomEvent('inspection-history:request'));
