@@ -54,6 +54,14 @@ function sendJson(res, status, body, head) {
   res.end(head ? undefined : JSON.stringify(body));
 }
 
+// Send lightweight image references, retaining the original historical snapshots on disk.
+function historyResponse(records) {
+  return {records:records.map(record=>({...record,cells:record.cells.map(cell=>{
+    if(!cell.model?.overlay)return cell;
+    return {...cell,model:{...cell.model,overlay:'./api/inspection-history/'+encodeURIComponent(record.id)+'/'+encodeURIComponent(cell.cell_id)+'/overlay'}};
+  })}))};
+}
+
 export function createApp({ webRoot = DEFAULTS.webRoot, flightDir = DEFAULTS.flightDir, historyFile = path.join(flightDir,'inspection-history.json'), basePath = '', sitlEnv = process.env, sitlHooks = {}, sitlArgsForTest, predictor = createPredictor() } = {}) {
   const base = basePath.replace(/\/+$/, '');
   const sitl = createSitlControl({ flightDir, env: sitlEnv, sitlArgs: sitlArgsForTest, ...sitlHooks });
@@ -78,11 +86,24 @@ export function createApp({ webRoot = DEFAULTS.webRoot, flightDir = DEFAULTS.fli
 
     if(pathname==='/api/inspection-history'){
       try {
-        if(req.method==='GET'||head)return sendJson(res,200,{records:await history.list()},head);
-        if(req.method==='PATCH') {const b=await readJson(req);return sendJson(res,200,{records:await history.review(b.id,b.cellId,b.candidateId,b.decision)});}
-        if(req.method==='DELETE') {const b=await readJson(req);return sendJson(res,200,{records:await history.remove(b.id)});}
+        if(req.method==='GET'||head)return sendJson(res,200,historyResponse(await history.list()),head);
+        if(req.method==='PATCH') {const b=await readJson(req);return sendJson(res,200,historyResponse(await history.review(b.id,b.cellId,b.candidateId,b.decision)));}
+        if(req.method==='DELETE') {const b=await readJson(req);return sendJson(res,200,historyResponse(await history.remove(b.id)));}
         return sendJson(res,405,{error:'method not allowed'});
       } catch(error){return sendJson(res,error.status??500,{error:error.status?error.message:'history storage unavailable'});}
+    }
+
+    const historyOverlay=pathname.match(/^\/api\/inspection-history\/([a-f0-9]{32})\/([A-D]-[1-6])\/overlay$/);
+    if(historyOverlay){
+      if(req.method!=='GET'&&!head)return sendJson(res,405,{error:'method not allowed'});
+      try{
+        const data=await history.overlay(historyOverlay[1],historyOverlay[2]);
+        const match=typeof data==='string'&&data.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=\r\n]+)$/);
+        if(!match)return sendJson(res,404,{error:'archived image not found'},head);
+        const image=Buffer.from(match[2],'base64');
+        res.writeHead(200,{'Content-Type':match[1],'Content-Length':image.length,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
+        return res.end(head?undefined:image);
+      }catch{return sendJson(res,500,{error:'history storage unavailable'},head);}
     }
 
     const control = pathname.match(/^\/api\/sitl\/([a-z]+)$/);
