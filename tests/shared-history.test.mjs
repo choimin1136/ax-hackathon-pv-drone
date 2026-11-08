@@ -91,3 +91,14 @@ test('prediction API persists the same photo and regions returned to overview',a
   assert.equal(records[0].cells[0].candidates.length,0);
  }finally{await new Promise(resolve=>app.close(resolve));await rm(dir,{recursive:true,force:true});}
 });
+test('finished flight files are not re-read until they change, and come back if the history file is reset',async()=>{
+ const dir=await mkdtemp(path.join(tmpdir(),'settled-history-'));
+ const file=path.join(dir,'inspection-history.json'),flight=path.join(dir,'flight.jsonl');
+ await writeFile(flight,[{type:'mission_start',cells:['A-1','A-2']},{type:'frame',cell_id:'A-1'},{type:'mission_end'}].map(JSON.stringify).join('\n'));
+ const store=createInspectionHistory({file,flightDir:dir});
+ assert.deepEqual((await store.list()).map(r=>r.visited),[['A-1']]);
+ assert.equal((await store.list()).length,1);
+ await rm(file);
+ assert.equal((await store.list()).length,1,'records are rebuilt after the history file is removed');
+ await rm(dir,{recursive:true,force:true});
+});

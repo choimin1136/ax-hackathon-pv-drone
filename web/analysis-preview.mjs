@@ -42,14 +42,19 @@ function renderWeather() {
   section.querySelector('[data-weather]').innerHTML = `<ul class="weather-row">${days.map(day => `<li class="${day === best ? 'best' : ''}"><span>${formatDay(day.date)}</span><b>${day.sky}</b><small>바람 ${day.wind}m/s</small></li>`).join('')}</ul>${best ? `<p class="preview-meta">추천: ${formatDay(best.date)} · ${best.sky}, 바람 ${best.wind}m/s</p>` : ''}`;
 }
 
+// The weather card needs no records, so it is drawn first; a slow history request shows a message instead of blank cards.
 async function refresh() {
+  renderWeather();
+  const priority = section.querySelector('[data-priority]'), trend = section.querySelector('[data-trend]');
+  if (!priority.innerHTML) priority.innerHTML = trend.innerHTML = empty('점검 기록을 불러오는 중입니다…');
   try {
-    const { records } = await (await fetch('./api/inspection-history')).json();
+    const response = await fetch('./api/inspection-history', { signal: AbortSignal.timeout(15000) });
+    if (!response.ok) throw Error(response.status);
+    const { records } = await response.json();
     renderPriority(records ?? []); renderTrend(records ?? []);
   } catch {
-    section.querySelector('[data-priority]').innerHTML = section.querySelector('[data-trend]').innerHTML = empty('점검 기록을 불러오지 못했습니다.');
+    priority.innerHTML = trend.innerHTML = empty('점검 기록을 불러오지 못했습니다. 잠시 후 다시 열어 주세요.');
   }
-  renderWeather();
 }
 document.addEventListener('dashboard:viewchange', event => { if (event.detail.id === 'value-results') refresh(); });
 document.addEventListener('inspection-history:review', refresh);

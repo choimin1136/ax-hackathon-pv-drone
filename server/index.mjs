@@ -67,7 +67,13 @@ export function createApp({ webRoot = DEFAULTS.webRoot, flightDir = DEFAULTS.fli
   const sitl = createSitlControl({ flightDir, env: sitlEnv, sitlArgs: sitlArgsForTest, ...sitlHooks });
   const history = createInspectionHistory({file:historyFile,flightDir});
   const recorder=createPredictionRecorder({history,predictor});
-  const poll=setInterval(()=>history.list().then(()=>recorder.sync()).catch(error=>console.error('History persistence failed:',error.message)),1000);poll.unref();
+  // Skip a tick while the previous scan is still running, so slow scans cannot pile up ahead of page requests.
+  let polling=false;
+  const poll=setInterval(()=>{
+    if(polling)return;
+    polling=true;
+    history.list().then(()=>recorder.sync()).catch(error=>console.error('History persistence failed:',error.message)).finally(()=>{polling=false;});
+  },1000);poll.unref();
   const actions = { start: () => sitl.start(), stop: () => sitl.stop(), fly: async body => {
     const result = await sitl.fly(body.cells ?? null);
     // A started full flight draws new random photos; a reflight keeps the photos of the inspection it repeats.

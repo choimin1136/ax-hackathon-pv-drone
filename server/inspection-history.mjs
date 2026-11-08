@@ -11,19 +11,25 @@ export function createInspectionHistory({file,flightDir}) {
   const run=task=>{const next=queue.then(task);queue=next.catch(()=>{});return next;};
   async function load(){try{return JSON.parse(await readFile(file,'utf8'));}catch(e){if(e.code==='ENOENT')return [];throw e;}}
   async function save(records){await mkdir(path.dirname(file),{recursive:true});await writeFile(file+'.tmp',JSON.stringify(records),'utf8');await rename(file+'.tmp',file);}
+  // Flight files already ingested as finished (complete, interrupted or deleted) are not read again until they change.
+  const settled=new Map();
   async function ingest(records){
     let changed=false;
     for(const name of (await readdir(flightDir).catch(()=>[])).filter(n=>/^[\w-]+\.jsonl$/.test(n))){
-      let rows,info;try{info=await stat(path.join(flightDir,name));rows=(await readFile(path.join(flightDir,name),'utf8')).split('\n').flatMap(line=>{try{return [JSON.parse(line)];}catch{return [];}});}catch{continue;}
+      let info;try{info=await stat(path.join(flightDir,name));}catch{continue;}
+      const stamp=`${info.birthtimeMs}:${info.mtimeMs}:${info.size}`;
+      if(settled.get(name)?.stamp===stamp&&records.some(r=>r.id===settled.get(name).id))continue;
+      let rows;try{rows=(await readFile(path.join(flightDir,name),'utf8')).split('\n').flatMap(line=>{try{return [JSON.parse(line)];}catch{return [];}});}catch{continue;}
       const start=rows.find(r=>r.type==='mission_start');if(!start)continue;
       const id=createHash('sha256').update(name+':'+info.birthtimeMs+':'+JSON.stringify(start)).digest('hex').slice(0,32);
-      const existing=records.find(r=>r.id===id);if(existing?.deletedAt)continue;
+      const existing=records.find(r=>r.id===id);if(existing?.deletedAt){settled.set(name,{stamp,id});continue;}
       if(existing && existing.sourceFile!==name){existing.sourceFile=name;changed=true;}
-      if(existing?.phase==='complete')continue;
+      if(existing?.phase==='complete'){settled.set(name,{stamp,id});continue;}
       const targets=[...new Set((start.cells??[]).filter(id=>CELL_IDS.includes(id)))];
       const visited=[...new Set(rows.filter(r=>r.type==='frame'&&targets.includes(r.cell_id)).map(r=>r.cell_id))];
       const end=rows.find(r=>r.type==='mission_end');
       const phase=end?'complete':Date.now()-info.mtimeMs>60000?'interrupted':'running';
+      if(phase!=='running')settled.set(name,{stamp,id});
       if(existing&&existing.phase===phase&&existing.visited.join()===visited.join())continue;
       const cells=missionFromFlight(visited,null,!!end,!end).cells.map(c=>{
         const previous=existing?.cells.find(old=>old.cell_id===c.cell_id);
