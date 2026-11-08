@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {mkdtemp,writeFile,rm,utimes} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {createInspectionHistory} from '../server/inspection-history.mjs';
@@ -101,4 +101,53 @@ test('finished flight files are not re-read until they change, and come back if 
  await rm(file);
  assert.equal((await store.list()).length,1,'records are rebuilt after the history file is removed');
  await rm(dir,{recursive:true,force:true});
+});
+
+test('replaced live flights become deletable without unlocking the new active flight',async()=>{
+ const dir=await mkdtemp(path.join(tmpdir(),'replaced-history-'));
+ const options={file:path.join(dir,'history.json'),flightDir:dir},flight=path.join(dir,'live.jsonl');
+ try{
+  await writeFile(flight,JSON.stringify({type:'mission_start',cells:['A-1'],run:1}));
+  const store=createInspectionHistory(options),[first]=await store.list();
+  assert.equal(first.phase,'running');
+  await writeFile(flight,JSON.stringify({type:'mission_start',cells:['A-2'],run:2}));
+  // Restart also repairs records persisted before the fix.
+  const reopened=createInspectionHistory(options),records=await reopened.list();
+  assert.equal(records.find(r=>r.id===first.id).phase,'interrupted');
+  const active=records.find(r=>r.id!==first.id);
+  assert.equal(active.phase,'running');
+  await assert.rejects(reopened.remove(active.id),{status:409});
+  assert.deepEqual((await reopened.remove(first.id)).map(r=>r.id),[active.id]);
+  assert.equal((await reopened.list()).length,1);
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
+
+test('missing sources are interrupted, but unreadable sources do not unlock records',async()=>{
+ const dir=await mkdtemp(path.join(tmpdir(),'missing-history-'));
+ const options={file:path.join(dir,'history.json'),flightDir:dir},flight=path.join(dir,'live.jsonl');
+ try{
+  await writeFile(flight,JSON.stringify({type:'mission_start',cells:['A-1']}));
+  const store=createInspectionHistory(options),[first]=await store.list();
+  await writeFile(flight,'incomplete JSON');
+  assert.equal((await store.list())[0].phase,'running');
+  await assert.rejects(store.remove(first.id),{status:409});
+  const inaccessible=createInspectionHistory({...options,flightDir:path.join(dir,'not-mounted')});
+  assert.equal((await inaccessible.list())[0].phase,'running');
+  await rm(flight);
+  assert.equal((await store.list())[0].phase,'interrupted');
+  assert.deepEqual(await store.remove(first.id),[]);
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
+
+test('unchanged stale flight expires while a recently updated flight remains protected',async()=>{
+ const dir=await mkdtemp(path.join(tmpdir(),'stale-history-'));
+ const flight=path.join(dir,'live.jsonl');
+ try{
+  await writeFile(flight,JSON.stringify({type:'mission_start',cells:['A-1']}));
+  const store=createInspectionHistory({file:path.join(dir,'history.json'),flightDir:dir});
+  const [record]=await store.list();await assert.rejects(store.remove(record.id),{status:409});
+  const old=new Date(Date.now()-120000);await utimes(flight,old,old);
+  assert.equal((await store.list())[0].phase,'interrupted');
+  assert.deepEqual(await store.remove(record.id),[]);
+ }finally{await rm(dir,{recursive:true,force:true});}
 });

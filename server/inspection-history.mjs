@@ -21,13 +21,18 @@ export function createInspectionHistory({file,flightDir}) {
   const settled=new Map();
   async function ingest(records){
     let changed=false;
-    for(const name of (await readdir(flightDir).catch(()=>[])).filter(n=>/^[\w-]+\.jsonl$/.test(n))){
+    // A new flight can replace live.jsonl before the old flight writes mission_end.
+    // Only reconcile sources we can positively identify; I/O failures must not unlock active records.
+    let names;try{names=await readdir(flightDir);}catch{return records;}
+    const sourceIds=new Map();
+    for(const name of names.filter(n=>/^[\w-]+\.jsonl$/.test(n))){
       let info;try{info=await stat(path.join(flightDir,name));}catch{continue;}
       const stamp=`${info.birthtimeMs}:${info.mtimeMs}:${info.size}`;
-      if(settled.get(name)?.stamp===stamp&&records.some(r=>r.id===settled.get(name).id))continue;
+      if(settled.get(name)?.stamp===stamp&&records.some(r=>r.id===settled.get(name).id)){sourceIds.set(name,settled.get(name).id);continue;}
       let rows;try{rows=(await readFile(path.join(flightDir,name),'utf8')).split('\n').flatMap(line=>{try{return [JSON.parse(line)];}catch{return [];}});}catch{continue;}
       const start=rows.find(r=>r.type==='mission_start');if(!start)continue;
       const id=createHash('sha256').update(name+':'+info.birthtimeMs+':'+JSON.stringify(start)).digest('hex').slice(0,32);
+      sourceIds.set(name,id);
       const existing=records.find(r=>r.id===id);if(existing?.deletedAt){settled.set(name,{stamp,id});continue;}
       if(existing && existing.sourceFile!==name){existing.sourceFile=name;changed=true;}
       if(existing?.phase==='complete'){settled.set(name,{stamp,id});continue;}
@@ -47,6 +52,12 @@ export function createInspectionHistory({file,flightDir}) {
         // Made-up daily power figures saved with the record so every inspection has a comparison to show.
         energy:dummyEnergy({startedAt:info.birthtime.toISOString(),visited})};
       if(existing)Object.assign(existing,record);else records.push(record);changed=true;
+    }
+    for(const record of records){
+      if(record.deletedAt||record.source!=='server-flight'||!record.sourceFile||!['running','paused'].includes(record.phase))continue;
+      const replaced=sourceIds.has(record.sourceFile)&&sourceIds.get(record.sourceFile)!==record.id;
+      const removed=!names.includes(record.sourceFile);
+      if(replaced||removed){record.phase='interrupted';changed=true;}
     }
     if(changed)await save(records);return records;
   }
