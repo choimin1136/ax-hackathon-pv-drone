@@ -4,13 +4,18 @@ import {createHash} from 'node:crypto';
 import {CELL_IDS,missionFromFlight} from '../web/mission.mjs';
 import {candidatesFor} from '../web/review.mjs';
 import {dummyEnergy} from '../web/energy-dummy.mjs';
+import {createHistoryFileCache} from './history-file-cache.mjs';
 
 // One server process owns this file. Writes are serialized and atomically replaced.
 export function createInspectionHistory({file,flightDir}) {
   let queue=Promise.resolve();
   const run=task=>{const next=queue.then(task);queue=next.catch(()=>{});return next;};
-  async function load(){try{return JSON.parse(await readFile(file,'utf8'));}catch(e){if(e.code==='ENOENT')return [];throw e;}}
-  async function save(records){await mkdir(path.dirname(file),{recursive:true});await writeFile(file+'.tmp',JSON.stringify(records),'utf8');await rename(file+'.tmp',file);}
+  const fileCache=createHistoryFileCache(file);
+  const load=()=>fileCache.load();
+  async function save(records){
+    try{await mkdir(path.dirname(file),{recursive:true});await writeFile(file+'.tmp',JSON.stringify(records),'utf8');await rename(file+'.tmp',file);}
+    finally{fileCache.invalidate();}
+  }
   // Flight files already ingested as finished (complete, interrupted or deleted) are not read again until they change.
   const settled=new Map();
   async function ingest(records){
