@@ -1,3 +1,4 @@
+import {reportRecords,reportRecordLabel,reportSnapshot} from './report-selection.mjs';
 import { cellReviewStatus, summarizeReview } from './cell-review-status.mjs';
 import { STATUS, summarize } from './mission.mjs';
 import { calculateValue } from './value.mjs';
@@ -9,7 +10,7 @@ const number = value => Number.isFinite(value) ? value.toLocaleString('ko-KR', {
 const LOGO = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#2563eb"/><g fill="#fff"><rect x="14" y="14" width="16" height="16" rx="3.5"/><rect x="14" y="34" width="16" height="16" rx="3.5"/><rect x="34" y="34" width="16" height="16" rx="3.5"/></g><rect x="34" y="14" width="16" height="16" rx="3.5" fill="#fbbf24"/></svg>';
 
 // records: saved inspection logs from the server, [] when none, null when they could not be loaded.
-export function buildReport({ mission, candidates, assumptions, generatedAt, records = [] }) {
+export function buildReport({ mission, candidates, assumptions, generatedAt, records = [], selectedRecord = null }) {
   const summary = summarize(mission);
   const counts = cell => {
     const approved=candidates.filter(c=>c.cell_id===cell.cell_id && c.decision==='approved').length;
@@ -31,14 +32,15 @@ export function buildReport({ mission, candidates, assumptions, generatedAt, rec
   return `<article class="report-document">
     <header class="report-head">${LOGO}<div><p class="eyebrow">SUNPATCH INSPECTION REPORT</p><h1>태양광 점검 보고서</h1></div><span class="badge">시뮬레이션 · 합성 데이터 · 검토용</span></header>
     <table class="kv info"><tbody><tr><th>점검 대상</th><td>가상 발전소 01 (4행 × 6열, 24구역)</td><th>생성 시각</th><td>${escape(generatedAt)}</td></tr><tr><th>점검 방법</th><td>드론 열화상 간이 점검 (ArduPilot 시뮬레이터)</td><th>판정</th><td>핫스팟 AI 모델 · 사람 확인</td></tr></tbody></table>
+    ${selectedRecord ? `<p class="note">보고서 기준 기록: ${escape(reportRecordLabel(selectedRecord))} (한국 시간) · 대상 ${mission.cells.length}구역 · 승인·제외는 생성 시점에 저장된 확인 내용입니다.</p>` : ''}
     <p class="note">드론 비행은 ArduPilot 시뮬레이터이고, 열화상은 AI Hub 데이터를 구역에 배정해 핫스팟 모델로 판정했습니다. 모델 판정은 참고용이며, 후보 승인은 사용자 확인 기록으로 전문 점검을 대체하지 않습니다. 생성 당시 결과를 고정한 사본입니다.</p>
     <h2>1. 점검 결과</h2>
-    <table class="kv summary"><tbody><tr><th>진행</th><td>${mission.phase === 'complete' ? '전체 점검 완료' : '부분 결과 · 전체 점검 미완료'} · ${summary.completed}/${mission.cells.length}구역</td><th>핫스팟 탐지</th><td class="hot">${summary.review}구역</td><th>핫스팟 없음</th><td>${summary.clear}구역</td></tr><tr><th>사람 확인</th><td colspan="5">미확인 ${human.unresolved}구역 · 승인 후보 있음 ${human.approved}구역 · 후보 모두 제외 ${human.excluded}구역</td></tr></tbody></table>
-    <p class="fine">핫스팟 없음은 안전을 보증하지 않습니다. 재비행 시뮬레이션은 새 분석 결과를 만들지 않아 원래 점검 상태를 유지합니다.</p>
+    <table class="kv summary"><tbody><tr><th>진행</th><td>${mission.phase === 'complete' ? (selectedRecord?.kind === 'selection' ? '선택 점검 완료' : '전체 점검 완료') : '부분 결과 · 점검 미완료'} · ${summary.completed}/${mission.cells.length}구역</td><th>핫스팟 탐지</th><td class="hot">${summary.review}구역</td><th>핫스팟 없음</th><td>${summary.clear}구역</td></tr><tr><th>사람 확인</th><td colspan="5">미확인 ${human.unresolved}구역 · 승인 후보 있음 ${human.approved}구역 · 후보 모두 제외 ${human.excluded}구역</td></tr></tbody></table>
+    <p class="fine">핫스팟 없음은 안전을 보증하지 않습니다. 선택한 점검 대상과 저장된 판정·확인 결과를 기준으로 작성됩니다.</p>
     <div class="report-table"><table><thead><tr><th>구역</th><th>탐지 상태</th><th>사람 확인 상태</th><th>후보 수</th><th>승인 수</th></tr></thead><tbody>${rows}</tbody></table></div>
     <h2>2. 핫스팟 구역 후보 확인</h2><p>승인 ${total('approved')}개 · 제외 ${total('excluded')}개 · 미확인 ${total('pending')}개 · 온도는 측정하지 않아 이상 등급은 현장 온도 측정 후 판정합니다.</p>
     ${hotRows ? `<div class="report-table"><table><thead><tr><th>구역</th><th>후보</th><th>승인</th><th>제외</th><th>미확인</th><th>최대 면적 (예시)</th></tr></thead><tbody>${hotRows}</tbody></table></div><h3>핫스팟 구역 현장 확인 항목</h3><ul>${FIELD_CHECKS.map(c => `<li>${c}</li>`).join('')}</ul>` : '<p>핫스팟이 탐지된 구역이 없습니다. 점검 미완료 구역을 안전하다고 판단할 수 없습니다.</p>'}
-    ${historySection(records, assumptions, escape)}
+    ${historySection(records, assumptions, escape, selectedRecord)}
     <h2>4. 금전·공공 가치 추정</h2>${estimate}
     <p class="fine">가정값: ${fields.map(([key,label,unit]) => `${label} ${number(assumptions[key])} ${unit}`).join(' · ')}</p>
     <p class="fine">연간 회수 가능 전력량 = 승인 구역 수 × 구역당 용량 × 8,760시간 × 이용률/100 × 출력 저하율/100 · 연간 금전 가치 = 전력량 × 판매 단가 · 탄소 감축 잠재량 = 전력량 × 탄소 계수 · 회수 기간 = 승인 구역 수 × 구역당 수리비 ÷ 연간 금전 가치. 기본값은 시연용이며 낮음·기준·높음은 가정별 시나리오로 통계적 신뢰구간이 아닙니다. 유지비·금융비용·할인율은 제외했고 실제 수익·감축 실적을 보장하지 않습니다.</p>
@@ -80,29 +82,55 @@ export function reportFile(body) {
 
 async function loadRecords() {
   try {
-    const response = await fetch('./api/inspection-history');
+    const response = await fetch('./api/inspection-history', {signal:AbortSignal.timeout(15000)});
     return response.ok ? (await response.json()).records ?? [] : null;
   } catch { return null; }
 }
 
 export function createReport({ getSnapshot }) {
   const root = document.getElementById('report');
-  root.innerHTML = '<div class="report-page-heading"><div><p class="eyebrow">INSPECTION REPORT</p><h2>점검 보고서</h2><p>점검 결과·후보 확인·점검 기록 분석을 보고서로 미리 확인하세요.</p></div><div class="report-preview-actions"><button type="button" data-report-create>현재 결과로 새로고침</button><button type="button" data-report-download>HTML 보고서 다운로드</button></div></div><p class="report-preview-status" role="status" data-report-message></p><iframe class="report-preview-frame" title="점검 보고서 미리보기" sandbox=""></iframe>';
+  root.innerHTML = '<div class="report-page-heading"><div><p class="eyebrow">INSPECTION REPORT</p><h2>점검 보고서</h2><p>점검 결과·후보 확인·점검 기록 분석을 보고서로 미리 확인하세요.</p></div><div class="report-preview-actions"><button type="button" data-report-create>선택 기록 새로고침</button><button type="button" data-report-download>HTML 보고서 다운로드</button></div></div><label class="recommendation-source">보고서 기준 기록 <select data-report-source aria-label="보고서 기준 기록"></select></label><p class="report-preview-status" role="status" data-report-message></p><iframe class="report-preview-frame" title="점검 보고서 미리보기" sandbox=""></iframe>';
   const frame = root.querySelector('iframe');
-  let body = '';
-  async function refresh() {
-    const generatedAt = new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}) + ' (한국 시간)';
-    const records = await loadRecords();
-    body = buildReport({...getSnapshot(),generatedAt,records});
-    frame.srcdoc = reportFile(body);
-    root.querySelector('[data-report-message]').textContent = '미리보기 생성: ' + generatedAt + ' · 생성 시점의 사본입니다. 변경 사항은 새로고침하면 반영됩니다.';
+  const select=root.querySelector('[data-report-source'),download=root.querySelector('[data-report-download]');
+  const message=root.querySelector('[data-report-message]');
+  let body='', records=[], selectedId='', requestVersion=0;
+  function clear(text){
+    body='';download.disabled=true;frame.srcdoc=reportFile('<p>'+escape(text)+'</p>');message.textContent=text;
   }
+  function renderSelected(){
+    const record=records.find(r=>r.id===selectedId);
+    if(!record){clear('선택한 기록이 없습니다. 보고서 기준 기록을 선택하세요.');return;}
+    const generatedAt=new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})+' (한국 시간)';
+    body=buildReport({...reportSnapshot(record,getSnapshot().assumptions,records),generatedAt});
+    frame.srcdoc=reportFile(body);download.disabled=false;
+    message.textContent='기준: '+reportRecordLabel(record)+' · 미리보기 생성: '+generatedAt+' · 저장된 승인·제외 변경은 새로고침하면 반영됩니다.';
+  }
+  async function refresh(){
+    const version=++requestVersion;
+    select.disabled=true;clear('점검 기록을 불러오는 중입니다…');
+    const next=await loadRecords();
+    if(version!==requestVersion)return;
+    records=reportRecords(next??[]);
+    select.replaceChildren();
+    if(next===null||!records.length){
+      const text=next===null?'점검 기록을 불러오지 못했습니다. 새로고침으로 다시 시도하세요.':'저장된 점검 기록이 없습니다.';
+      select.add(new Option(text,''));clear(text);return;
+    }
+    if(!selectedId)selectedId=records[0].id;
+    if(!records.some(r=>r.id===selectedId)){
+      selectedId='';select.add(new Option('기존 기록이 삭제되었습니다. 기록을 선택하세요.',''));
+    }
+    for(const record of records)select.add(new Option(reportRecordLabel(record),record.id));
+    select.value=selectedId;select.disabled=false;renderSelected();
+  }
+  select.onchange=()=>{selectedId=select.value;renderSelected();};
+  download.disabled=true;
   root.querySelector('[data-report-create]').onclick = refresh;
   document.addEventListener('dashboard:viewchange', event => {
     if (event.detail.id === 'report') refresh();
   });
   root.querySelector('[data-report-download]').onclick = async () => {
-    if (!body) await refresh();
+    if (!body) return;
     const url = URL.createObjectURL(new Blob([reportFile(body)],{type:'text/html;charset=utf-8'}));
     const a = document.createElement('a'); a.href = url; a.download = 'sunpatch-inspection-report.html'; document.body.append(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
