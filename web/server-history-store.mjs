@@ -1,8 +1,22 @@
 export function createServerHistoryStore(onChange) {
-  let records=[],error='서버 기록을 불러오는 중입니다.',pending=Promise.resolve(),revision=0,saving=false;
+  let records=[],error='서버 기록을 불러오는 중입니다.',pending=Promise.resolve(),revision=0,saving=false,refreshing=false;
   const url=new URL('./api/inspection-history',document.baseURI);
   async function request(options){const response=await fetch(url,options);if(!response.ok)throw Error(response.status===409?'비행 완료 후 후보를 확인하세요.':'서버 기록을 불러오거나 저장하지 못했습니다.');return (await response.json()).records;}
-  async function refresh(){if(saving)return;const version=revision;try{const next=await request();if(version!==revision)return;const changed=error||JSON.stringify(next)!==JSON.stringify(records);records=next;error='';if(changed)onChange();}catch(e){error=e.message;onChange();}}
+  async function refresh(){
+    // Timer ticks and page navigation share one read, including JSON decoding.
+    if(saving||refreshing)return;
+    refreshing=true;
+    const version=revision;
+    try{
+      const next=await request();
+      if(version!==revision)return;
+      const changed=error||JSON.stringify(next)!==JSON.stringify(records);
+      records=next;error='';if(changed)onChange();
+    }catch(e){
+      // An older read must not replace the result of a review or deletion.
+      if(version===revision){error=e.message;onChange();}
+    }finally{refreshing=false;}
+  }
   return {
     list:()=>structuredClone(records),error:()=>error,saving:()=>saving,refresh,
     async remove(id){
