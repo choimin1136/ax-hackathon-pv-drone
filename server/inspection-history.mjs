@@ -63,6 +63,11 @@ export function createInspectionHistory({file,flightDir}) {
       cell.candidate_count=cell.candidates.length;cell.confirmed_count=0;
       await save(records);
     }),
+    overlay:(id,cellId)=>run(async()=>{
+      const record=(await load()).find(r=>r.id===id&&!r.deletedAt);
+      if(!record?.visited.includes(cellId)||!record.targets.includes(cellId))return null;
+      return record.cells.find(c=>c.cell_id===cellId)?.model?.overlay??null;
+    }),
     list:()=>run(async()=>(await ingest(await load())).filter(r=>!r.deletedAt)),
     remove:id=>run(async()=>{
       const records=await ingest(await load()),record=records.find(r=>r.id===id&&!r.deletedAt);
